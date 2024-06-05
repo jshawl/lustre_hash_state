@@ -19,9 +19,7 @@ fn listen(_handler: fn(String) -> Nil) -> Nil
 
 /// Updates the hash value.
 pub fn update(key: String, value: String) -> effect.Effect(msg) {
-  effect.from(fn(_) { 
-    set_hash(key <> "=" <> value)
-  })
+  effect.from(fn(_) { set_hash(key <> "=" <> value) })
 }
 
 /// The effect to be returned in your init method. Sets up hashchange event
@@ -33,6 +31,6 @@ pub fn init(msg: fn(String, String) -> msg) -> effect.Effect(msg) {
   case string.split(hash |> string.drop_left(1), "=") {
     [] -> Nil
     [key, value] -> msg(key, value) |> dispatch
-    [_,..] -> Nil
+    [_, ..] -> Nil
   }
 }

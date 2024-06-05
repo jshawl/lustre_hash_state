@@ -51,7 +51,7 @@ fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(msg)) {
     }
     UserResetMessage -> #(
       Model(..model, value: "", length: 0),
-      lustre_hash_state.update("message",""),
+      lustre_hash_state.update("message", ""),
     )
   }
 }
