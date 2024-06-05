@@ -1,4 +1,5 @@
 import gleam/int
+import gleam/io
 import gleam/string
 import lustre
 import lustre/attribute
@@ -7,7 +8,7 @@ import lustre/element.{type Element}
 import lustre/event
 import lustre/ui
 import lustre/ui/layout/aside
-import hash_state
+import lustre_hash_state_effect
 
 // MAIN ------------------------------------------------------------------------
 
@@ -23,7 +24,10 @@ type Model {
 }
 
 fn init(_flags) -> #(Model, effect.Effect(Msg)) {
-  #(Model(value: "", length: 0, max: 10), effect.none())
+  #(
+    Model(value: "", length: 0, max: 10),
+    lustre_hash_state_effect.init(HashChange),
+  )
 }
 
 // UPDATE ----------------------------------------------------------------------
@@ -31,19 +35,31 @@ fn init(_flags) -> #(Model, effect.Effect(Msg)) {
 pub opaque type Msg {
   UserUpdatedMessage(value: String)
   UserResetMessage
+  HashChange(value: String)
 }
 
-fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
+fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(msg)) {
+  io.debug("received update")
+  io.debug(msg)
   case msg {
+    HashChange(value) -> {
+      #(Model(..model, value: value), effect.none())
+    }
     UserUpdatedMessage(value) -> {
       let length = string.length(value)
 
-      #(case length <= model.max {
-        True -> Model(..model, value: value, length: length)
-        False -> model
-      }, hash_state.set(value))
+      #(
+        case length <= model.max {
+          True -> Model(..model, value: value, length: length)
+          False -> model
+        },
+        lustre_hash_state_effect.set(value),
+      )
     }
-    UserResetMessage -> #(Model(..model, value: "", length: 0), hash_state.noop())
+    UserResetMessage -> #(
+      Model(..model, value: "", length: 0),
+      lustre_hash_state_effect.noop(),
+    )
   }
 }
 

@@ -1335,6 +1335,15 @@ function debug(term) {
   return term;
 }
 
+// build/dev/javascript/gleam_stdlib/gleam/bool.mjs
+function guard(requirement, consequence, alternative) {
+  if (requirement) {
+    return consequence;
+  } else {
+    return alternative();
+  }
+}
+
 // build/dev/javascript/lustre/lustre/effect.mjs
 var Effect = class extends CustomType {
   constructor(all) {
@@ -1349,37 +1358,6 @@ function from2(effect) {
 }
 function none() {
   return new Effect(toList([]));
-}
-
-// build/dev/javascript/hash_state/ffi.mjs
-var setHash = (value3) => {
-  if (globalThis.location) {
-    globalThis.location.hash = value3;
-  }
-};
-
-// build/dev/javascript/hash_state/hash_state.mjs
-function noop() {
-  return none();
-}
-function set(s) {
-  debug("idk man");
-  debug(s);
-  return from2(
-    (_) => {
-      let _pipe = s;
-      return setHash(_pipe);
-    }
-  );
-}
-
-// build/dev/javascript/gleam_stdlib/gleam/bool.mjs
-function guard(requirement, consequence, alternative) {
-  if (requirement) {
-    return consequence;
-  } else {
-    return alternative();
-  }
 }
 
 // build/dev/javascript/lustre/lustre/internals/vdom.mjs
@@ -1791,13 +1769,13 @@ var LustreClientApplication2 = class _LustreClientApplication {
   #model = null;
   #update = null;
   #view = null;
-  static start(flags, selector, init3, update3, view2) {
+  static start(flags, selector, init4, update3, view2) {
     if (!is_browser())
       return new Error(new NotABrowser());
     const root2 = selector instanceof HTMLElement ? selector : document.querySelector(selector);
     if (!root2)
       return new Error(new ElementNotFound(selector));
-    const app = new _LustreClientApplication(init3(flags), update3, view2, root2);
+    const app = new _LustreClientApplication(init4(flags), update3, view2, root2);
     return new Ok((msg) => app.send(msg));
   }
   constructor([model, effects], update3, view2, root2 = document.body, isComponent = false) {
@@ -1912,9 +1890,9 @@ var is_browser = () => window && window.document;
 
 // build/dev/javascript/lustre/lustre.mjs
 var App = class extends CustomType {
-  constructor(init3, update3, view2, on_attribute_change) {
+  constructor(init4, update3, view2, on_attribute_change) {
     super();
-    this.init = init3;
+    this.init = init4;
     this.update = update3;
     this.view = view2;
     this.on_attribute_change = on_attribute_change;
@@ -1928,8 +1906,8 @@ var ElementNotFound = class extends CustomType {
 };
 var NotABrowser = class extends CustomType {
 };
-function application(init3, update3, view2) {
-  return new App(init3, update3, view2, new None());
+function application(init4, update3, view2) {
+  return new App(init4, update3, view2, new None());
 }
 function start3(app, selector, flags) {
   return guard(
@@ -1962,6 +1940,46 @@ function on_input(msg) {
     (event2) => {
       let _pipe = value2(event2);
       return map2(_pipe, msg);
+    }
+  );
+}
+
+// build/dev/javascript/lustre_hash_state_effect/ffi.mjs
+var setHash = (value3) => {
+  if (globalThis.location) {
+    globalThis.location.hash = value3;
+  }
+};
+var getHash2 = () => globalThis.location?.hash ?? "";
+var listen = (dispatch) => {
+  dispatch(getHash2());
+  return globalThis.addEventListener("hashchange", () => {
+    return dispatch(getHash2());
+  });
+};
+
+// build/dev/javascript/lustre_hash_state_effect/lustre_hash_state_effect.mjs
+function noop() {
+  return none();
+}
+function set(s) {
+  return from2(
+    (_) => {
+      let _pipe = s;
+      return setHash(_pipe);
+    }
+  );
+}
+function init2(msg) {
+  return from2(
+    (dispatch) => {
+      return listen(
+        (hash) => {
+          let _pipe = hash;
+          let _pipe$1 = msg(_pipe);
+          return dispatch(_pipe$1);
+        }
+      );
     }
   );
 }
@@ -2257,11 +2275,27 @@ var UserUpdatedMessage = class extends CustomType {
 };
 var UserResetMessage = class extends CustomType {
 };
-function init2(_) {
-  return [new Model("", 0, 10), none()];
+var HashChange = class extends CustomType {
+  constructor(value3) {
+    super();
+    this.value = value3;
+  }
+};
+function init3(_) {
+  return [
+    new Model("", 0, 10),
+    init2((var0) => {
+      return new HashChange(var0);
+    })
+  ];
 }
 function update2(model, msg) {
-  if (msg instanceof UserUpdatedMessage) {
+  debug("received update");
+  debug(msg);
+  if (msg instanceof HashChange) {
+    let value3 = msg.value;
+    return [model.withFields({ value: value3 }), none()];
+  } else if (msg instanceof UserUpdatedMessage) {
     let value3 = msg.value;
     let length3 = length2(value3);
     return [
@@ -2276,7 +2310,10 @@ function update2(model, msg) {
       set(value3)
     ];
   } else {
-    return [model.withFields({ value: "", length: 0 }), noop()];
+    return [
+      model.withFields({ value: "", length: 0 }),
+      noop()
+    ];
   }
 }
 function view(model) {
@@ -2312,13 +2349,13 @@ function view(model) {
   );
 }
 function main() {
-  let app = application(init2, update2, view);
+  let app = application(init3, update2, view);
   let $ = start3(app, "#app", void 0);
   if (!$.isOk()) {
     throw makeError(
       "assignment_no_match",
       "strings",
-      16,
+      17,
       "main",
       "Assignment pattern did not match",
       { value: $ }
