@@ -1,5 +1,4 @@
 import gleam/int
-import gleam/io
 import gleam/string
 import lustre
 import lustre/attribute
@@ -39,15 +38,12 @@ pub opaque type Msg {
 }
 
 fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(msg)) {
-  io.debug("received update")
-  io.debug(msg)
   case msg {
     HashChange(value) -> {
       #(Model(..model, value: value), effect.none())
     }
     UserUpdatedMessage(value) -> {
       let length = string.length(value)
-
       #(
         case length <= model.max {
           True -> Model(..model, value: value, length: length)
