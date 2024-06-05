@@ -1,6 +1,4 @@
-import gleam/io
 import lustre/effect
-import gleam/string
 
 pub fn noop() {
   effect.none()
@@ -13,9 +11,7 @@ pub fn get_hash() -> msg
 pub fn set_hash(s: String) -> msg
 
 @external(javascript, "./ffi.mjs", "listen")
-pub fn listen(_handler: fn(String) -> Nil) -> Nil {
-  Nil
-}
+pub fn listen(_handler: fn(String) -> Nil) -> Nil
 
 pub fn set(s) -> effect.Effect(msg) {
   effect.from(fn(_) { s |> set_hash() })
