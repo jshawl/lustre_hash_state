@@ -1,4 +1,4 @@
-name = "lustre_hash_state_effect"
+name = "lustre_hash_state"
 version = "0.0.1"
 target = "javascript"
 

@@ -1,4 +1,5 @@
 import lustre/effect
+import gleam/io
 
 /// A convenience method identical to effect.none()
 pub fn noop() {
@@ -18,8 +19,9 @@ fn listen(_handler: fn(String) -> Nil) -> Nil
 
 /// Updates the hash value.
 pub fn update(s) -> effect.Effect(msg) {
-  use dispatch <- effect.from
-  s |> set_hash() |> dispatch
+  effect.from(fn(_){
+    s |> set_hash()
+  })
 }
 
 /// The effect to be returned in your init method. Sets up hashchange event

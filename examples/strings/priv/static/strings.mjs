@@ -108,6 +108,11 @@ var BitArray = class _BitArray {
     return new _BitArray(this.buffer.slice(index2));
   }
 };
+var UtfCodepoint = class {
+  constructor(value3) {
+    this.value = value3;
+  }
+};
 function byteArrayToInt(byteArray) {
   byteArray = byteArray.reverse();
   let value3 = 0;
@@ -276,6 +281,48 @@ function do_map(loop$list, loop$fun, loop$acc) {
 }
 function map(list, fun) {
   return do_map(list, fun, toList([]));
+}
+function drop(loop$list, loop$n) {
+  while (true) {
+    let list = loop$list;
+    let n = loop$n;
+    let $ = n <= 0;
+    if ($) {
+      return list;
+    } else {
+      if (list.hasLength(0)) {
+        return toList([]);
+      } else {
+        let xs = list.tail;
+        loop$list = xs;
+        loop$n = n - 1;
+      }
+    }
+  }
+}
+function do_take(loop$list, loop$n, loop$acc) {
+  while (true) {
+    let list = loop$list;
+    let n = loop$n;
+    let acc = loop$acc;
+    let $ = n <= 0;
+    if ($) {
+      return reverse(acc);
+    } else {
+      if (list.hasLength(0)) {
+        return reverse(acc);
+      } else {
+        let x = list.head;
+        let xs = list.tail;
+        loop$list = xs;
+        loop$n = n - 1;
+        loop$acc = prepend(x, acc);
+      }
+    }
+  }
+}
+function take(list, n) {
+  return do_take(list, n, toList([]));
 }
 function fold(loop$list, loop$initial, loop$fun) {
   while (true) {
@@ -1140,6 +1187,14 @@ function string_length(string3) {
     return string3.match(/./gsu).length;
   }
 }
+function graphemes(string3) {
+  const iterator = graphemes_iterator(string3);
+  if (iterator) {
+    return List.fromArray(Array.from(iterator).map((item) => item.segment));
+  } else {
+    return List.fromArray(string3.match(/./gsu));
+  }
+}
 function graphemes_iterator(string3) {
   if (Intl && Intl.Segmenter) {
     return new Intl.Segmenter().segment(string3)[Symbol.iterator]();
@@ -1151,6 +1206,15 @@ function concat(xs) {
     result = result + x;
   }
   return result;
+}
+function print_debug(string3) {
+  if (typeof process === "object" && process.stderr?.write) {
+    process.stderr.write(string3 + "\n");
+  } else if (typeof Deno === "object") {
+    Deno.stderr.writeSync(new TextEncoder().encode(string3 + "\n"));
+  } else {
+    console.log(string3);
+  }
 }
 function map_get(map4, key) {
   const value3 = map4.get(key, NOT_FOUND);
@@ -1221,6 +1285,83 @@ function try_get_field(value3, field4, or_else) {
     return or_else();
   }
 }
+function inspect(v) {
+  const t = typeof v;
+  if (v === true)
+    return "True";
+  if (v === false)
+    return "False";
+  if (v === null)
+    return "//js(null)";
+  if (v === void 0)
+    return "Nil";
+  if (t === "string")
+    return JSON.stringify(v);
+  if (t === "bigint" || t === "number")
+    return v.toString();
+  if (Array.isArray(v))
+    return `#(${v.map(inspect).join(", ")})`;
+  if (v instanceof List)
+    return inspectList(v);
+  if (v instanceof UtfCodepoint)
+    return inspectUtfCodepoint(v);
+  if (v instanceof BitArray)
+    return inspectBitArray(v);
+  if (v instanceof CustomType)
+    return inspectCustomType(v);
+  if (v instanceof Dict)
+    return inspectDict(v);
+  if (v instanceof Set)
+    return `//js(Set(${[...v].map(inspect).join(", ")}))`;
+  if (v instanceof RegExp)
+    return `//js(${v})`;
+  if (v instanceof Date)
+    return `//js(Date("${v.toISOString()}"))`;
+  if (v instanceof Function) {
+    const args = [];
+    for (const i of Array(v.length).keys())
+      args.push(String.fromCharCode(i + 97));
+    return `//fn(${args.join(", ")}) { ... }`;
+  }
+  return inspectObject(v);
+}
+function inspectDict(map4) {
+  let body = "dict.from_list([";
+  let first = true;
+  map4.forEach((value3, key) => {
+    if (!first)
+      body = body + ", ";
+    body = body + "#(" + inspect(key) + ", " + inspect(value3) + ")";
+    first = false;
+  });
+  return body + "])";
+}
+function inspectObject(v) {
+  const name = Object.getPrototypeOf(v)?.constructor?.name || "Object";
+  const props = [];
+  for (const k of Object.keys(v)) {
+    props.push(`${inspect(k)}: ${inspect(v[k])}`);
+  }
+  const body = props.length ? " " + props.join(", ") + " " : "";
+  const head = name === "Object" ? "" : name + " ";
+  return `//js(${head}{${body}})`;
+}
+function inspectCustomType(record) {
+  const props = Object.keys(record).map((label2) => {
+    const value3 = inspect(record[label2]);
+    return isNaN(parseInt(label2)) ? `${label2}: ${value3}` : value3;
+  }).join(", ");
+  return props ? `${record.constructor.name}(${props})` : record.constructor.name;
+}
+function inspectList(list) {
+  return `[${list.toArray().map(inspect).join(", ")}]`;
+}
+function inspectBitArray(bits) {
+  return `<<${Array.from(bits.buffer).join(", ")}>>`;
+}
+function inspectUtfCodepoint(codepoint2) {
+  return `//utfcodepoint(${String.fromCodePoint(codepoint2.value)})`;
+}
 
 // build/dev/javascript/gleam_stdlib/gleam/int.mjs
 function to_string2(x) {
@@ -1230,6 +1371,57 @@ function to_string2(x) {
 // build/dev/javascript/gleam_stdlib/gleam/string.mjs
 function length2(string3) {
   return string_length(string3);
+}
+function concat3(strings) {
+  let _pipe = strings;
+  let _pipe$1 = from_strings(_pipe);
+  return to_string(_pipe$1);
+}
+function do_slice(string3, idx, len) {
+  let _pipe = string3;
+  let _pipe$1 = graphemes(_pipe);
+  let _pipe$2 = drop(_pipe$1, idx);
+  let _pipe$3 = take(_pipe$2, len);
+  return concat3(_pipe$3);
+}
+function slice(string3, idx, len) {
+  let $ = len < 0;
+  if ($) {
+    return "";
+  } else {
+    let $1 = idx < 0;
+    if ($1) {
+      let translated_idx = length2(string3) + idx;
+      let $2 = translated_idx < 0;
+      if ($2) {
+        return "";
+      } else {
+        return do_slice(string3, translated_idx, len);
+      }
+    } else {
+      return do_slice(string3, idx, len);
+    }
+  }
+}
+function drop_left(string3, num_graphemes) {
+  let $ = num_graphemes < 0;
+  if ($) {
+    return string3;
+  } else {
+    return slice(string3, num_graphemes, length2(string3) - num_graphemes);
+  }
+}
+function inspect2(term) {
+  let _pipe = inspect(term);
+  return to_string(_pipe);
+}
+
+// build/dev/javascript/gleam_stdlib/gleam/io.mjs
+function debug(term) {
+  let _pipe = term;
+  let _pipe$1 = inspect2(_pipe);
+  print_debug(_pipe$1);
+  return term;
 }
 
 // build/dev/javascript/gleam_stdlib/gleam/bool.mjs
@@ -1841,7 +2033,7 @@ function on_input(msg) {
   );
 }
 
-// build/dev/javascript/lustre_hash_state_effect/ffi.mjs
+// build/dev/javascript/lustre_hash_state/ffi.mjs
 var setHash = (value3) => {
   if (globalThis.location) {
     globalThis.location.hash = value3;
@@ -1855,16 +2047,12 @@ var listen = (dispatch) => {
   });
 };
 
-// build/dev/javascript/lustre_hash_state_effect/lustre_hash_state_effect.mjs
-function noop() {
-  return none();
-}
+// build/dev/javascript/lustre_hash_state/lustre_hash_state.mjs
 function update2(s) {
   return from2(
-    (dispatch) => {
+    (_) => {
       let _pipe = s;
-      let _pipe$1 = setHash(_pipe);
-      return dispatch(_pipe$1);
+      return setHash(_pipe);
     }
   );
 }
@@ -2188,9 +2376,14 @@ function init3(_) {
   ];
 }
 function update3(model, msg) {
+  debug("received msg:");
+  debug(msg);
   if (msg instanceof HashChange) {
     let value3 = msg.value;
-    return [model.withFields({ value: value3 }), none()];
+    return [
+      model.withFields({ value: drop_left(value3, 1) }),
+      none()
+    ];
   } else if (msg instanceof UserUpdatedMessage) {
     let value3 = msg.value;
     let length3 = length2(value3);
@@ -2208,7 +2401,7 @@ function update3(model, msg) {
   } else {
     return [
       model.withFields({ value: "", length: 0 }),
-      noop()
+      update2("")
     ];
   }
 }
@@ -2251,7 +2444,7 @@ function main() {
     throw makeError(
       "assignment_no_match",
       "strings",
-      16,
+      17,
       "main",
       "Assignment pattern did not match",
       { value: $ }

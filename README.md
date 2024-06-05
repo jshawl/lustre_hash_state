@@ -1,21 +1,21 @@
-# lustre_hash_state_effect
+# lustre_hash_state
 
-[![Package Version](https://img.shields.io/hexpm/v/lustre_hash_state_effect)](https://hex.pm/packages/lustre_hash_state_effect)
-[![Hex Docs](https://img.shields.io/badge/hex-docs-ffaff3)](https://hexdocs.pm/lustre_hash_state_effect/)
+[![Package Version](https://img.shields.io/hexpm/v/lustre_hash_state)](https://hex.pm/packages/lustre_hash_state)
+[![Hex Docs](https://img.shields.io/badge/hex-docs-ffaff3)](https://hexdocs.pm/lustre_hash_state/)
 
 ```sh
-gleam add lustre_hash_state_effect
+gleam add lustre_hash_state
 ```
 
 ```gleam
-import lustre_hash_state_effect
+import lustre_hash_state
 
 pub fn main() {
   // TODO: An example of the project in use
 }
 ```
 
-Further documentation can be found at <https://hexdocs.pm/lustre_hash_state_effect>.
+Further documentation can be found at <https://hexdocs.pm/lustre_hash_state>.
 
 ## Development
 

@@ -1,5 +1,6 @@
 import gleam/int
 import gleam/string
+import gleam/io
 import lustre
 import lustre/attribute
 import lustre/effect
@@ -7,7 +8,7 @@ import lustre/element.{type Element}
 import lustre/event
 import lustre/ui
 import lustre/ui/layout/aside
-import lustre_hash_state_effect
+import lustre_hash_state
 
 // MAIN ------------------------------------------------------------------------
 
@@ -25,7 +26,7 @@ type Model {
 fn init(_flags) -> #(Model, effect.Effect(Msg)) {
   #(
     Model(value: "", length: 0, max: 10),
-    lustre_hash_state_effect.init(HashChange),
+    lustre_hash_state.init(HashChange),
   )
 }
 
@@ -38,9 +39,11 @@ pub opaque type Msg {
 }
 
 fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(msg)) {
+  io.debug("received msg:")
+  io.debug(msg)
   case msg {
     HashChange(value) -> {
-      #(Model(..model, value: value), effect.none())
+      #(Model(..model, value: string.drop_left(value, 1)), effect.none())
     }
     UserUpdatedMessage(value) -> {
       let length = string.length(value)
@@ -49,12 +52,12 @@ fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(msg)) {
           True -> Model(..model, value: value, length: length)
           False -> model
         },
-        lustre_hash_state_effect.update(value),
+        lustre_hash_state.update(value),
       )
     }
     UserResetMessage -> #(
       Model(..model, value: "", length: 0),
-      lustre_hash_state_effect.noop(),
+      lustre_hash_state.update(""),
     )
   }
 }
