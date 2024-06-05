@@ -53,7 +53,7 @@ fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(msg)) {
           True -> Model(..model, value: value, length: length)
           False -> model
         },
-        lustre_hash_state_effect.set(value),
+        lustre_hash_state_effect.update(value),
       )
     }
     UserResetMessage -> #(

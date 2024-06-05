@@ -1769,18 +1769,18 @@ var LustreClientApplication2 = class _LustreClientApplication {
   #model = null;
   #update = null;
   #view = null;
-  static start(flags, selector, init4, update3, view2) {
+  static start(flags, selector, init4, update4, view2) {
     if (!is_browser())
       return new Error(new NotABrowser());
     const root2 = selector instanceof HTMLElement ? selector : document.querySelector(selector);
     if (!root2)
       return new Error(new ElementNotFound(selector));
-    const app = new _LustreClientApplication(init4(flags), update3, view2, root2);
+    const app = new _LustreClientApplication(init4(flags), update4, view2, root2);
     return new Ok((msg) => app.send(msg));
   }
-  constructor([model, effects], update3, view2, root2 = document.body, isComponent = false) {
+  constructor([model, effects], update4, view2, root2 = document.body, isComponent = false) {
     this.#model = model;
-    this.#update = update3;
+    this.#update = update4;
     this.#view = view2;
     this.#root = root2;
     this.#effects = effects.all.toArray();
@@ -1890,10 +1890,10 @@ var is_browser = () => window && window.document;
 
 // build/dev/javascript/lustre/lustre.mjs
 var App = class extends CustomType {
-  constructor(init4, update3, view2, on_attribute_change) {
+  constructor(init4, update4, view2, on_attribute_change) {
     super();
     this.init = init4;
-    this.update = update3;
+    this.update = update4;
     this.view = view2;
     this.on_attribute_change = on_attribute_change;
   }
@@ -1906,8 +1906,8 @@ var ElementNotFound = class extends CustomType {
 };
 var NotABrowser = class extends CustomType {
 };
-function application(init4, update3, view2) {
-  return new App(init4, update3, view2, new None());
+function application(init4, update4, view2) {
+  return new App(init4, update4, view2, new None());
 }
 function start3(app, selector, flags) {
   return guard(
@@ -1962,11 +1962,12 @@ var listen = (dispatch) => {
 function noop() {
   return none();
 }
-function set(s) {
+function update2(s) {
   return from2(
-    (_) => {
+    (dispatch) => {
       let _pipe = s;
-      return setHash(_pipe);
+      let _pipe$1 = setHash(_pipe);
+      return dispatch(_pipe$1);
     }
   );
 }
@@ -2289,7 +2290,7 @@ function init3(_) {
     })
   ];
 }
-function update2(model, msg) {
+function update3(model, msg) {
   debug("received update");
   debug(msg);
   if (msg instanceof HashChange) {
@@ -2307,7 +2308,7 @@ function update2(model, msg) {
           return model;
         }
       })(),
-      set(value3)
+      update2(value3)
     ];
   } else {
     return [
@@ -2349,7 +2350,7 @@ function view(model) {
   );
 }
 function main() {
-  let app = application(init3, update2, view);
+  let app = application(init3, update3, view);
   let $ = start3(app, "#app", void 0);
   if (!$.isOk()) {
     throw makeError(
