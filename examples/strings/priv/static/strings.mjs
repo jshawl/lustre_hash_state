@@ -319,22 +319,6 @@ function do_take(loop$list, loop$n, loop$acc) {
 function take(list, n) {
   return do_take(list, n, toList([]));
 }
-function fold(loop$list, loop$initial, loop$fun) {
-  while (true) {
-    let list = loop$list;
-    let initial = loop$initial;
-    let fun = loop$fun;
-    if (list.hasLength(0)) {
-      return initial;
-    } else {
-      let x = list.head;
-      let rest$1 = list.tail;
-      loop$list = rest$1;
-      loop$initial = fun(initial, x);
-      loop$fun = fun;
-    }
-  }
-}
 
 // build/dev/javascript/gleam_stdlib/gleam/result.mjs
 function map2(result, fun) {
@@ -1407,25 +1391,8 @@ function attribute(name, value3) {
 function on(name, handler) {
   return new Event("on" + name, handler);
 }
-function style(properties) {
-  return attribute(
-    "style",
-    fold(
-      properties,
-      "",
-      (styles, _use1) => {
-        let name$1 = _use1[0];
-        let value$1 = _use1[1];
-        return styles + name$1 + ":" + value$1 + ";";
-      }
-    )
-  );
-}
 function class$(name) {
   return attribute("class", name);
-}
-function type_(name) {
-  return attribute("type", name);
 }
 function value(val) {
   return attribute("value", val);
@@ -1928,11 +1895,6 @@ function start3(app, selector, flags) {
 function on2(name, handler) {
   return on(name, handler);
 }
-function on_click(msg) {
-  return on2("click", (_) => {
-    return new Ok(msg);
-  });
-}
 function value2(event2) {
   let _pipe = event2;
   return field("target", field("value", string))(
@@ -1998,31 +1960,14 @@ function init2(msg) {
 }
 
 // build/dev/javascript/lustre/lustre/element/html.mjs
-function div(attrs, children) {
-  return element("div", attrs, children);
-}
 function span(attrs, children) {
   return element("span", attrs, children);
-}
-function button(attrs, children) {
-  return element("button", attrs, children);
 }
 function input(attrs) {
   return element("input", attrs, toList([]));
 }
 function label(attrs, children) {
   return element("label", attrs, children);
-}
-
-// build/dev/javascript/lustre_ui/lustre/ui/button.mjs
-function button2(attributes, children) {
-  return button(
-    prepend(
-      class$("lustre-ui-button"),
-      prepend(type_("button"), attributes)
-    ),
-    children
-  );
 }
 
 // build/dev/javascript/lustre_ui/lustre/ui/layout/stack.mjs
@@ -2060,34 +2005,6 @@ function input2(attributes) {
   return input(
     prepend(class$("lustre-ui-input"), attributes)
   );
-}
-
-// build/dev/javascript/lustre_ui/lustre/ui/layout/aside.mjs
-function of3(element2, attributes, side, main2) {
-  return element2(
-    prepend(class$("lustre-ui-aside"), attributes),
-    toList([side, main2])
-  );
-}
-function aside(attributes, side, main2) {
-  return of3(div, attributes, side, main2);
-}
-function content_first() {
-  return class$("content-first");
-}
-function align_centre() {
-  return class$("align-centre");
-}
-
-// build/dev/javascript/lustre_ui/lustre/ui/layout/centre.mjs
-function of4(element2, attributes, children) {
-  return element2(
-    prepend(class$("lustre-ui-centre"), attributes),
-    toList([children])
-  );
-}
-function centre(attributes, children) {
-  return of4(div, attributes, children);
 }
 
 // build/dev/javascript/gleam_community_colour/gleam_community/colour.mjs
@@ -2265,19 +2182,14 @@ var dark_charcoal = new Rgba(
 var pink = new Rgba(1, 0.6862745098039216, 0.9529411764705882, 1);
 
 // build/dev/javascript/lustre_ui/lustre/ui.mjs
-var aside2 = aside;
-var button3 = button2;
-var centre2 = centre;
 var field3 = field2;
 var input3 = input2;
 
 // build/dev/javascript/strings/strings.mjs
 var Model = class extends CustomType {
-  constructor(value3, length3, max2) {
+  constructor(value3) {
     super();
     this.value = value3;
-    this.length = length3;
-    this.max = max2;
   }
 };
 var UserUpdatedMessage = class extends CustomType {
@@ -2285,8 +2197,6 @@ var UserUpdatedMessage = class extends CustomType {
     super();
     this.value = value3;
   }
-};
-var UserResetMessage = class extends CustomType {
 };
 var HashChange = class extends CustomType {
   constructor(key, value3) {
@@ -2297,7 +2207,7 @@ var HashChange = class extends CustomType {
 };
 function init3(_) {
   return [
-    new Model("", 0, 10),
+    new Model(""),
     init2(
       (var0, var1) => {
         return new HashChange(var0, var1);
@@ -2311,55 +2221,30 @@ function update3(model, msg) {
     return [model.withFields({ value: value3 }), none()];
   } else if (msg instanceof UserUpdatedMessage) {
     let value3 = msg.value;
-    let length3 = length2(value3);
     return [
-      (() => {
-        let $ = length3 <= model.max;
-        if ($) {
-          return model.withFields({ value: value3, length: length3 });
-        } else {
-          return model;
-        }
-      })(),
+      model.withFields({ value: value3 }),
       update2("message", value3)
     ];
   } else {
     return [
-      model.withFields({ value: "", length: 0 }),
+      model.withFields({ value: "" }),
       update2("message", "")
     ];
   }
 }
 function view(model) {
-  let styles = toList([
-    ["width", "100vw"],
-    ["height", "100vh"],
-    ["padding", "1rem"]
-  ]);
-  let length3 = to_string2(model.length);
-  let max2 = to_string2(model.max);
-  return centre2(
-    toList([style(styles)]),
-    aside2(
-      toList([content_first(), align_centre()]),
-      field3(
-        toList([]),
-        toList([text("Write a message:")]),
-        input3(
-          toList([
-            value(model.value),
-            on_input((var0) => {
-              return new UserUpdatedMessage(var0);
-            })
-          ])
-        ),
-        toList([text(length3 + "/" + max2)])
-      ),
-      button3(
-        toList([on_click(new UserResetMessage())]),
-        toList([text("Reset")])
-      )
-    )
+  return field3(
+    toList([]),
+    toList([text("Write a message:")]),
+    input3(
+      toList([
+        value(model.value),
+        on_input((var0) => {
+          return new UserUpdatedMessage(var0);
+        })
+      ])
+    ),
+    toList([])
   );
 }
 function main() {

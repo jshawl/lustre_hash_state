@@ -19,11 +19,11 @@ pub fn main() {
 // MODEL -----------------------------------------------------------------------
 
 type Model {
-  Model(value: String, length: Int, max: Int)
+  Model(value: String)
 }
 
 fn init(_flags) -> #(Model, effect.Effect(Msg)) {
-  #(Model(value: "", length: 0, max: 10), lustre_hash_state.init(HashChange))
+  #(Model(value: ""), lustre_hash_state.init(HashChange))
 }
 
 // UPDATE ----------------------------------------------------------------------
@@ -40,17 +40,13 @@ fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(msg)) {
       #(Model(..model, value: value), effect.none())
     }
     UserUpdatedMessage(value) -> {
-      let length = string.length(value)
       #(
-        case length <= model.max {
-          True -> Model(..model, value: value, length: length)
-          False -> model
-        },
+        Model(..model, value: value),
         lustre_hash_state.update("message", value),
       )
     }
     UserResetMessage -> #(
-      Model(..model, value: "", length: 0),
+      Model(..model, value: ""),
       lustre_hash_state.update("message", ""),
     )
   }
@@ -59,24 +55,10 @@ fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(msg)) {
 // VIEW ------------------------------------------------------------------------
 
 fn view(model: Model) -> Element(Msg) {
-  let styles = [#("width", "100vw"), #("height", "100vh"), #("padding", "1rem")]
-  let length = int.to_string(model.length)
-  let max = int.to_string(model.max)
-
-  ui.centre(
-    [attribute.style(styles)],
-    ui.aside(
-      [aside.content_first(), aside.align_centre()],
-      ui.field(
-        [],
-        [element.text("Write a message:")],
-        ui.input([
-          attribute.value(model.value),
-          event.on_input(UserUpdatedMessage),
-        ]),
-        [element.text(length <> "/" <> max)],
-      ),
-      ui.button([event.on_click(UserResetMessage)], [element.text("Reset")]),
-    ),
+  ui.field(
+    [],
+    [element.text("Write a message:")],
+    ui.input([attribute.value(model.value), event.on_input(UserUpdatedMessage)]),
+    [],
   )
 }
