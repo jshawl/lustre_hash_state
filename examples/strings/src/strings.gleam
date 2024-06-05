@@ -1,12 +1,9 @@
-import gleam/int
-import gleam/string
 import lustre
 import lustre/attribute
 import lustre/effect
 import lustre/element.{type Element}
 import lustre/event
 import lustre/ui
-import lustre/ui/layout/aside
 import lustre_hash_state
 
 // MAIN ------------------------------------------------------------------------
