@@ -1959,8 +1959,9 @@ function init2(msg) {
       return listen(
         (hash) => {
           let _pipe = hash;
-          let _pipe$1 = msg(_pipe);
-          return dispatch(_pipe$1);
+          let _pipe$1 = drop_left(_pipe, 1);
+          let _pipe$2 = msg(_pipe$1);
+          return dispatch(_pipe$2);
         }
       );
     }
@@ -2275,10 +2276,7 @@ function init3(_) {
 function update3(model, msg) {
   if (msg instanceof HashChange) {
     let value3 = msg.value;
-    return [
-      model.withFields({ value: drop_left(value3, 1) }),
-      none()
-    ];
+    return [model.withFields({ value: value3 }), none()];
   } else if (msg instanceof UserUpdatedMessage) {
     let value3 = msg.value;
     let length3 = length2(value3);

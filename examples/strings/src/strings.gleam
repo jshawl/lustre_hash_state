@@ -37,7 +37,7 @@ pub opaque type Msg {
 fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(msg)) {
   case msg {
     HashChange(value) -> {
-      #(Model(..model, value: string.drop_left(value, 1)), effect.none())
+      #(Model(..model, value: value), effect.none())
     }
     UserUpdatedMessage(value) -> {
       let length = string.length(value)

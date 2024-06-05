@@ -1,3 +1,4 @@
+import gleam/string
 import lustre/effect
 
 /// A convenience method identical to effect.none()
@@ -27,5 +28,5 @@ pub fn init(msg: fn(String) -> msg) -> effect.Effect(msg) {
   use dispatch <- effect.from
   use hash <- listen
 
-  hash |> msg |> dispatch
+  hash |> string.drop_left(1) |> msg |> dispatch
 }
