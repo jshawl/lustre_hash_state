@@ -1,4 +1,5 @@
 import gleam/dict
+import gleam/result
 import lustre
 import lustre/attribute
 import lustre/effect
@@ -49,16 +50,26 @@ fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(msg)) {
 // VIEW ------------------------------------------------------------------------
 
 fn view(model: Model) -> Element(Msg) {
-  let Model(d) = model
-  let assert Ok(out) = dict.get(d, "message")
+  let Model(dct) = model
 
-  ui.field(
-    [],
-    [element.text("Write a message:")],
-    ui.input([
-      attribute.value(out),
-      event.on_input(fn(value) { UserUpdatedMessage("message", value) }),
-    ]),
-    [],
-  )
+  ui.group([], [
+    ui.field(
+      [],
+      [element.text("Write a message:")],
+      ui.input([
+        attribute.value(result.unwrap(dict.get(dct, "message"), "error")),
+        event.on_input(fn(value) { UserUpdatedMessage("message", value) }),
+      ]),
+      [],
+    ),
+    ui.field(
+      [],
+      [element.text("Write another message:")],
+      ui.input([
+        attribute.value(result.unwrap(dict.get(dct, "message"), "error")),
+        event.on_input(fn(value) { UserUpdatedMessage("message2", value) }),
+      ]),
+      [],
+    ),
+  ])
 }

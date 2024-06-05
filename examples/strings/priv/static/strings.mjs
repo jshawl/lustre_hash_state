@@ -361,6 +361,14 @@ function try$(result, fun) {
     return new Error(e);
   }
 }
+function unwrap(result, default$) {
+  if (result.isOk()) {
+    let v = result[0];
+    return v;
+  } else {
+    return default$;
+  }
+}
 
 // build/dev/javascript/gleam_stdlib/gleam/string_builder.mjs
 function from_strings(strings) {
@@ -1994,6 +2002,9 @@ function init2(msg) {
 }
 
 // build/dev/javascript/lustre/lustre/element/html.mjs
+function div(attrs, children) {
+  return element("div", attrs, children);
+}
 function span(attrs, children) {
   return element("span", attrs, children);
 }
@@ -2039,6 +2050,17 @@ function input2(attributes) {
   return input(
     prepend(class$("lustre-ui-input"), attributes)
   );
+}
+
+// build/dev/javascript/lustre_ui/lustre/ui/layout/group.mjs
+function of3(element2, attributes, children) {
+  return element2(
+    prepend(class$("lustre-ui-group"), attributes),
+    children
+  );
+}
+function group(attributes, children) {
+  return of3(div, attributes, children);
 }
 
 // build/dev/javascript/gleam_community_colour/gleam_community/colour.mjs
@@ -2217,6 +2239,7 @@ var pink = new Rgba(1, 0.6862745098039216, 0.9529411764705882, 1);
 
 // build/dev/javascript/lustre_ui/lustre/ui.mjs
 var field3 = field2;
+var group2 = group;
 var input3 = input2;
 
 // build/dev/javascript/strings/strings.mjs
@@ -2273,33 +2296,41 @@ function update3(model, msg) {
   }
 }
 function view(model) {
-  let d = model[0];
-  let $ = get(d, "message");
-  if (!$.isOk()) {
-    throw makeError(
-      "assignment_no_match",
-      "strings",
-      53,
-      "view",
-      "Assignment pattern did not match",
-      { value: $ }
-    );
-  }
-  let out = $[0];
-  return field3(
+  let dct = model[0];
+  return group2(
     toList([]),
-    toList([text("Write a message:")]),
-    input3(
-      toList([
-        value(out),
-        on_input(
-          (value3) => {
-            return new UserUpdatedMessage("message", value3);
-          }
-        )
-      ])
-    ),
-    toList([])
+    toList([
+      field3(
+        toList([]),
+        toList([text("Write a message:")]),
+        input3(
+          toList([
+            value(unwrap(get(dct, "message"), "error")),
+            on_input(
+              (value3) => {
+                return new UserUpdatedMessage("message", value3);
+              }
+            )
+          ])
+        ),
+        toList([])
+      ),
+      field3(
+        toList([]),
+        toList([text("Write another message:")]),
+        input3(
+          toList([
+            value(unwrap(get(dct, "message"), "error")),
+            on_input(
+              (value3) => {
+                return new UserUpdatedMessage("message2", value3);
+              }
+            )
+          ])
+        ),
+        toList([])
+      )
+    ])
   );
 }
 function main() {
@@ -2309,7 +2340,7 @@ function main() {
     throw makeError(
       "assignment_no_match",
       "strings",
-      14,
+      15,
       "main",
       "Assignment pattern did not match",
       { value: $ }
