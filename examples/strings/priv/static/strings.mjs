@@ -2193,8 +2193,9 @@ var Model = class extends CustomType {
   }
 };
 var UserUpdatedMessage = class extends CustomType {
-  constructor(value3) {
+  constructor(key, value3) {
     super();
+    this.key = key;
     this.value = value3;
   }
 };
@@ -2220,10 +2221,11 @@ function update3(model, msg) {
     let value3 = msg.value;
     return [model.withFields({ value: value3 }), none()];
   } else {
+    let key = msg.key;
     let value3 = msg.value;
     return [
       model.withFields({ value: value3 }),
-      update2("message", value3)
+      update2(key, value3)
     ];
   }
 }
@@ -2234,9 +2236,11 @@ function view(model) {
     input3(
       toList([
         value(model.value),
-        on_input((value3) => {
-          return new UserUpdatedMessage(value3);
-        })
+        on_input(
+          (value3) => {
+            return new UserUpdatedMessage("message", value3);
+          }
+        )
       ])
     ),
     toList([])

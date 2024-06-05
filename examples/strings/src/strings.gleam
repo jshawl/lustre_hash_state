@@ -26,7 +26,7 @@ fn init(_flags) -> #(Model, effect.Effect(Msg)) {
 // UPDATE ----------------------------------------------------------------------
 
 pub opaque type Msg {
-  UserUpdatedMessage(value: String)
+  UserUpdatedMessage(key: String, value: String)
   HashChange(key: String, value: String)
 }
 
@@ -35,11 +35,8 @@ fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(msg)) {
     HashChange(_key, value) -> {
       #(Model(..model, value: value), effect.none())
     }
-    UserUpdatedMessage(value) -> {
-      #(
-        Model(..model, value: value),
-        lustre_hash_state.update("message", value),
-      )
+    UserUpdatedMessage(key, value) -> {
+      #(Model(..model, value: value), lustre_hash_state.update(key, value))
     }
   }
 }
@@ -52,7 +49,7 @@ fn view(model: Model) -> Element(Msg) {
     [element.text("Write a message:")],
     ui.input([
       attribute.value(model.value),
-      event.on_input(fn(value) { UserUpdatedMessage(value) }),
+      event.on_input(fn(value) { UserUpdatedMessage("message", value) }),
     ]),
     [],
   )
