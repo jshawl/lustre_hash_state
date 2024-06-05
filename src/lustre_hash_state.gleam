@@ -1,4 +1,3 @@
-import gleam/io
 import lustre/effect
 
 /// A convenience method identical to effect.none()
