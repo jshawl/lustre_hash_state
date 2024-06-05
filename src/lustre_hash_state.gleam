@@ -18,15 +18,21 @@ fn set_hash(s: String) -> msg
 fn listen(_handler: fn(String) -> Nil) -> Nil
 
 /// Updates the hash value.
-pub fn update(s) -> effect.Effect(msg) {
-  effect.from(fn(_) { s |> set_hash() })
+pub fn update(key: String, value: String) -> effect.Effect(msg) {
+  effect.from(fn(_) { 
+    set_hash(key <> "=" <> value)
+  })
 }
 
 /// The effect to be returned in your init method. Sets up hashchange event
 /// listener and sends messages to update.
-pub fn init(msg: fn(String) -> msg) -> effect.Effect(msg) {
+pub fn init(msg: fn(String, String) -> msg) -> effect.Effect(msg) {
   use dispatch <- effect.from
   use hash <- listen
 
-  hash |> string.drop_left(1) |> msg |> dispatch
+  case string.split(hash |> string.drop_left(1), "=") {
+    [] -> Nil
+    [key, value] -> msg(key, value) |> dispatch
+    [_,..] -> Nil
+  }
 }

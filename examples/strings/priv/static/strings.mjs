@@ -369,8 +369,14 @@ function try$(result, fun) {
 function from_strings(strings) {
   return concat(strings);
 }
+function from_string(string3) {
+  return identity(string3);
+}
 function to_string(builder) {
   return identity(builder);
+}
+function split2(iodata, pattern) {
+  return split(iodata, pattern);
 }
 
 // build/dev/javascript/gleam_stdlib/gleam/dynamic.mjs
@@ -1195,6 +1201,9 @@ function graphemes_iterator(string3) {
     return new Intl.Segmenter().segment(string3)[Symbol.iterator]();
   }
 }
+function split(xs, pattern) {
+  return List.fromArray(xs.split(pattern));
+}
 function concat(xs) {
   let result = "";
   for (const x of xs) {
@@ -1318,6 +1327,16 @@ function drop_left(string3, num_graphemes) {
     return string3;
   } else {
     return slice(string3, num_graphemes, length2(string3) - num_graphemes);
+  }
+}
+function split3(x, substring) {
+  if (substring === "") {
+    return graphemes(x);
+  } else {
+    let _pipe = x;
+    let _pipe$1 = from_string(_pipe);
+    let _pipe$2 = split2(_pipe$1, substring);
+    return map(_pipe$2, to_string);
   }
 }
 
@@ -1945,23 +1964,33 @@ var listen = (dispatch) => {
 };
 
 // build/dev/javascript/lustre_hash_state/lustre_hash_state.mjs
-function update2(s) {
-  return from2(
-    (_) => {
-      let _pipe = s;
-      return setHash(_pipe);
-    }
-  );
+function update2(key, value3) {
+  return from2((_) => {
+    return setHash(key + "=" + value3);
+  });
 }
 function init2(msg) {
   return from2(
     (dispatch) => {
       return listen(
         (hash) => {
-          let _pipe = hash;
-          let _pipe$1 = drop_left(_pipe, 1);
-          let _pipe$2 = msg(_pipe$1);
-          return dispatch(_pipe$2);
+          let $ = split3(
+            (() => {
+              let _pipe = hash;
+              return drop_left(_pipe, 1);
+            })(),
+            "="
+          );
+          if ($.hasLength(0)) {
+            return void 0;
+          } else if ($.hasLength(2)) {
+            let key = $.head;
+            let value3 = $.tail.head;
+            let _pipe = msg(key, value3);
+            return dispatch(_pipe);
+          } else {
+            return void 0;
+          }
         }
       );
     }
@@ -2260,17 +2289,20 @@ var UserUpdatedMessage = class extends CustomType {
 var UserResetMessage = class extends CustomType {
 };
 var HashChange = class extends CustomType {
-  constructor(value3) {
+  constructor(key, value3) {
     super();
+    this.key = key;
     this.value = value3;
   }
 };
 function init3(_) {
   return [
     new Model("", 0, 10),
-    init2((var0) => {
-      return new HashChange(var0);
-    })
+    init2(
+      (var0, var1) => {
+        return new HashChange(var0, var1);
+      }
+    )
   ];
 }
 function update3(model, msg) {
@@ -2289,12 +2321,12 @@ function update3(model, msg) {
           return model;
         }
       })(),
-      update2(value3)
+      update2("message", value3)
     ];
   } else {
     return [
       model.withFields({ value: "", length: 0 }),
-      update2("")
+      update2("message", "")
     ];
   }
 }

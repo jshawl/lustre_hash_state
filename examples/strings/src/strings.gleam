@@ -31,12 +31,12 @@ fn init(_flags) -> #(Model, effect.Effect(Msg)) {
 pub opaque type Msg {
   UserUpdatedMessage(value: String)
   UserResetMessage
-  HashChange(value: String)
+  HashChange(key: String, value: String)
 }
 
 fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(msg)) {
   case msg {
-    HashChange(value) -> {
+    HashChange(_key, value) -> {
       #(Model(..model, value: value), effect.none())
     }
     UserUpdatedMessage(value) -> {
@@ -46,12 +46,12 @@ fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(msg)) {
           True -> Model(..model, value: value, length: length)
           False -> model
         },
-        lustre_hash_state.update(value),
+        lustre_hash_state.update("message", value),
       )
     }
     UserResetMessage -> #(
       Model(..model, value: "", length: 0),
-      lustre_hash_state.update(""),
+      lustre_hash_state.update("message",""),
     )
   }
 }
