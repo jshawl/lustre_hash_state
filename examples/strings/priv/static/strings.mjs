@@ -2219,16 +2219,11 @@ function update3(model, msg) {
   if (msg instanceof HashChange) {
     let value3 = msg.value;
     return [model.withFields({ value: value3 }), none()];
-  } else if (msg instanceof UserUpdatedMessage) {
+  } else {
     let value3 = msg.value;
     return [
       model.withFields({ value: value3 }),
       update2("message", value3)
-    ];
-  } else {
-    return [
-      model.withFields({ value: "" }),
-      update2("message", "")
     ];
   }
 }

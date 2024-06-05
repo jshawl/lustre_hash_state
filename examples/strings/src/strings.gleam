@@ -27,7 +27,6 @@ fn init(_flags) -> #(Model, effect.Effect(Msg)) {
 
 pub opaque type Msg {
   UserUpdatedMessage(value: String)
-  UserResetMessage
   HashChange(key: String, value: String)
 }
 
@@ -42,10 +41,6 @@ fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(msg)) {
         lustre_hash_state.update("message", value),
       )
     }
-    UserResetMessage -> #(
-      Model(..model, value: ""),
-      lustre_hash_state.update("message", ""),
-    )
   }
 }
 
