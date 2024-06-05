@@ -1,5 +1,5 @@
-import lustre/effect
 import gleam/io
+import lustre/effect
 
 /// A convenience method identical to effect.none()
 pub fn noop() {
@@ -19,9 +19,7 @@ fn listen(_handler: fn(String) -> Nil) -> Nil
 
 /// Updates the hash value.
 pub fn update(s) -> effect.Effect(msg) {
-  effect.from(fn(_){
-    s |> set_hash()
-  })
+  effect.from(fn(_) { s |> set_hash() })
 }
 
 /// The effect to be returned in your init method. Sets up hashchange event

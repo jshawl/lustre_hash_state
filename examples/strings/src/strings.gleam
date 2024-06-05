@@ -1,6 +1,6 @@
 import gleam/int
-import gleam/string
 import gleam/io
+import gleam/string
 import lustre
 import lustre/attribute
 import lustre/effect
@@ -24,10 +24,7 @@ type Model {
 }
 
 fn init(_flags) -> #(Model, effect.Effect(Msg)) {
-  #(
-    Model(value: "", length: 0, max: 10),
-    lustre_hash_state.init(HashChange),
-  )
+  #(Model(value: "", length: 0, max: 10), lustre_hash_state.init(HashChange))
 }
 
 // UPDATE ----------------------------------------------------------------------
