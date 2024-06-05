@@ -50,7 +50,10 @@ fn view(model: Model) -> Element(Msg) {
   ui.field(
     [],
     [element.text("Write a message:")],
-    ui.input([attribute.value(model.value), event.on_input(UserUpdatedMessage)]),
+    ui.input([
+      attribute.value(model.value),
+      event.on_input(fn(value) { UserUpdatedMessage(value) }),
+    ]),
     [],
   )
 }

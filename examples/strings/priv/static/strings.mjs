@@ -2234,8 +2234,8 @@ function view(model) {
     input3(
       toList([
         value(model.value),
-        on_input((var0) => {
-          return new UserUpdatedMessage(var0);
+        on_input((value3) => {
+          return new UserUpdatedMessage(value3);
         })
       ])
     ),
