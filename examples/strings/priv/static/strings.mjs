@@ -239,6 +239,230 @@ function to_result(option, e) {
     return new Error(e);
   }
 }
+function from_result(result) {
+  if (result.isOk()) {
+    let a = result[0];
+    return new Some(a);
+  } else {
+    return new None();
+  }
+}
+
+// build/dev/javascript/gleam_stdlib/gleam/int.mjs
+function to_string2(x) {
+  return to_string(x);
+}
+
+// build/dev/javascript/gleam_stdlib/gleam/list.mjs
+function do_reverse(loop$remaining, loop$accumulator) {
+  while (true) {
+    let remaining = loop$remaining;
+    let accumulator = loop$accumulator;
+    if (remaining.hasLength(0)) {
+      return accumulator;
+    } else {
+      let item = remaining.head;
+      let rest$1 = remaining.tail;
+      loop$remaining = rest$1;
+      loop$accumulator = prepend(item, accumulator);
+    }
+  }
+}
+function reverse(xs) {
+  return do_reverse(xs, toList([]));
+}
+function do_map(loop$list, loop$fun, loop$acc) {
+  while (true) {
+    let list = loop$list;
+    let fun = loop$fun;
+    let acc = loop$acc;
+    if (list.hasLength(0)) {
+      return reverse(acc);
+    } else {
+      let x = list.head;
+      let xs = list.tail;
+      loop$list = xs;
+      loop$fun = fun;
+      loop$acc = prepend(fun(x), acc);
+    }
+  }
+}
+function map(list, fun) {
+  return do_map(list, fun, toList([]));
+}
+function drop(loop$list, loop$n) {
+  while (true) {
+    let list = loop$list;
+    let n = loop$n;
+    let $ = n <= 0;
+    if ($) {
+      return list;
+    } else {
+      if (list.hasLength(0)) {
+        return toList([]);
+      } else {
+        let xs = list.tail;
+        loop$list = xs;
+        loop$n = n - 1;
+      }
+    }
+  }
+}
+function do_take(loop$list, loop$n, loop$acc) {
+  while (true) {
+    let list = loop$list;
+    let n = loop$n;
+    let acc = loop$acc;
+    let $ = n <= 0;
+    if ($) {
+      return reverse(acc);
+    } else {
+      if (list.hasLength(0)) {
+        return reverse(acc);
+      } else {
+        let x = list.head;
+        let xs = list.tail;
+        loop$list = xs;
+        loop$n = n - 1;
+        loop$acc = prepend(x, acc);
+      }
+    }
+  }
+}
+function take(list, n) {
+  return do_take(list, n, toList([]));
+}
+
+// build/dev/javascript/gleam_stdlib/gleam/result.mjs
+function map2(result, fun) {
+  if (result.isOk()) {
+    let x = result[0];
+    return new Ok(fun(x));
+  } else {
+    let e = result[0];
+    return new Error(e);
+  }
+}
+function map_error(result, fun) {
+  if (result.isOk()) {
+    let x = result[0];
+    return new Ok(x);
+  } else {
+    let error = result[0];
+    return new Error(fun(error));
+  }
+}
+function try$(result, fun) {
+  if (result.isOk()) {
+    let x = result[0];
+    return fun(x);
+  } else {
+    let e = result[0];
+    return new Error(e);
+  }
+}
+
+// build/dev/javascript/gleam_stdlib/gleam/string_builder.mjs
+function from_strings(strings) {
+  return concat(strings);
+}
+function from_string(string3) {
+  return identity(string3);
+}
+function to_string3(builder) {
+  return identity(builder);
+}
+function split2(iodata, pattern) {
+  return split(iodata, pattern);
+}
+
+// build/dev/javascript/gleam_stdlib/gleam/dynamic.mjs
+var DecodeError = class extends CustomType {
+  constructor(expected, found, path) {
+    super();
+    this.expected = expected;
+    this.found = found;
+    this.path = path;
+  }
+};
+function from(a) {
+  return identity(a);
+}
+function string(data) {
+  return decode_string(data);
+}
+function classify(data) {
+  return classify_dynamic(data);
+}
+function int(data) {
+  return decode_int(data);
+}
+function any(decoders) {
+  return (data) => {
+    if (decoders.hasLength(0)) {
+      return new Error(
+        toList([new DecodeError("another type", classify(data), toList([]))])
+      );
+    } else {
+      let decoder2 = decoders.head;
+      let decoders$1 = decoders.tail;
+      let $ = decoder2(data);
+      if ($.isOk()) {
+        let decoded = $[0];
+        return new Ok(decoded);
+      } else {
+        return any(decoders$1)(data);
+      }
+    }
+  };
+}
+function push_path(error, name) {
+  let name$1 = from(name);
+  let decoder2 = any(
+    toList([string, (x) => {
+      return map2(int(x), to_string2);
+    }])
+  );
+  let name$2 = (() => {
+    let $ = decoder2(name$1);
+    if ($.isOk()) {
+      let name$22 = $[0];
+      return name$22;
+    } else {
+      let _pipe = toList(["<", classify(name$1), ">"]);
+      let _pipe$1 = from_strings(_pipe);
+      return to_string3(_pipe$1);
+    }
+  })();
+  return error.withFields({ path: prepend(name$2, error.path) });
+}
+function map_errors(result, f) {
+  return map_error(
+    result,
+    (_capture) => {
+      return map(_capture, f);
+    }
+  );
+}
+function field(name, inner_type) {
+  return (value3) => {
+    let missing_field_error = new DecodeError("field", "nothing", toList([]));
+    return try$(
+      decode_field(value3, name),
+      (maybe_inner) => {
+        let _pipe = maybe_inner;
+        let _pipe$1 = to_result(_pipe, toList([missing_field_error]));
+        let _pipe$2 = try$(_pipe$1, inner_type);
+        return map_errors(
+          _pipe$2,
+          (_capture) => {
+            return push_path(_capture, name);
+          }
+        );
+      }
+    );
+  };
+}
 
 // build/dev/javascript/gleam_stdlib/dict.mjs
 var referenceMap = /* @__PURE__ */ new WeakMap();
@@ -984,12 +1208,18 @@ function concat(xs) {
   }
   return result;
 }
+function new_map() {
+  return Dict.new();
+}
 function map_get(map4, key) {
   const value3 = map4.get(key, NOT_FOUND);
   if (value3 === NOT_FOUND) {
     return new Error(Nil);
   }
   return new Ok(value3);
+}
+function map_insert(key, value3, map4) {
+  return map4.set(key, value3);
 }
 function classify_dynamic(data) {
   if (typeof data === "string") {
@@ -1054,220 +1284,24 @@ function try_get_field(value3, field4, or_else) {
   }
 }
 
-// build/dev/javascript/gleam_stdlib/gleam/int.mjs
-function to_string2(x) {
-  return to_string(x);
+// build/dev/javascript/gleam_stdlib/gleam/dict.mjs
+function new$() {
+  return new_map();
 }
-
-// build/dev/javascript/gleam_stdlib/gleam/list.mjs
-function do_reverse(loop$remaining, loop$accumulator) {
-  while (true) {
-    let remaining = loop$remaining;
-    let accumulator = loop$accumulator;
-    if (remaining.hasLength(0)) {
-      return accumulator;
-    } else {
-      let item = remaining.head;
-      let rest$1 = remaining.tail;
-      loop$remaining = rest$1;
-      loop$accumulator = prepend(item, accumulator);
-    }
-  }
+function get(from3, get2) {
+  return map_get(from3, get2);
 }
-function reverse(xs) {
-  return do_reverse(xs, toList([]));
+function insert(dict, key, value3) {
+  return map_insert(key, value3, dict);
 }
-function do_map(loop$list, loop$fun, loop$acc) {
-  while (true) {
-    let list = loop$list;
-    let fun = loop$fun;
-    let acc = loop$acc;
-    if (list.hasLength(0)) {
-      return reverse(acc);
-    } else {
-      let x = list.head;
-      let xs = list.tail;
-      loop$list = xs;
-      loop$fun = fun;
-      loop$acc = prepend(fun(x), acc);
-    }
-  }
-}
-function map(list, fun) {
-  return do_map(list, fun, toList([]));
-}
-function drop(loop$list, loop$n) {
-  while (true) {
-    let list = loop$list;
-    let n = loop$n;
-    let $ = n <= 0;
-    if ($) {
-      return list;
-    } else {
-      if (list.hasLength(0)) {
-        return toList([]);
-      } else {
-        let xs = list.tail;
-        loop$list = xs;
-        loop$n = n - 1;
-      }
-    }
-  }
-}
-function do_take(loop$list, loop$n, loop$acc) {
-  while (true) {
-    let list = loop$list;
-    let n = loop$n;
-    let acc = loop$acc;
-    let $ = n <= 0;
-    if ($) {
-      return reverse(acc);
-    } else {
-      if (list.hasLength(0)) {
-        return reverse(acc);
-      } else {
-        let x = list.head;
-        let xs = list.tail;
-        loop$list = xs;
-        loop$n = n - 1;
-        loop$acc = prepend(x, acc);
-      }
-    }
-  }
-}
-function take(list, n) {
-  return do_take(list, n, toList([]));
-}
-
-// build/dev/javascript/gleam_stdlib/gleam/result.mjs
-function map2(result, fun) {
-  if (result.isOk()) {
-    let x = result[0];
-    return new Ok(fun(x));
-  } else {
-    let e = result[0];
-    return new Error(e);
-  }
-}
-function map_error(result, fun) {
-  if (result.isOk()) {
-    let x = result[0];
-    return new Ok(x);
-  } else {
-    let error = result[0];
-    return new Error(fun(error));
-  }
-}
-function try$(result, fun) {
-  if (result.isOk()) {
-    let x = result[0];
-    return fun(x);
-  } else {
-    let e = result[0];
-    return new Error(e);
-  }
-}
-
-// build/dev/javascript/gleam_stdlib/gleam/string_builder.mjs
-function from_strings(strings) {
-  return concat(strings);
-}
-function from_string(string3) {
-  return identity(string3);
-}
-function to_string3(builder) {
-  return identity(builder);
-}
-function split2(iodata, pattern) {
-  return split(iodata, pattern);
-}
-
-// build/dev/javascript/gleam_stdlib/gleam/dynamic.mjs
-var DecodeError = class extends CustomType {
-  constructor(expected, found, path) {
-    super();
-    this.expected = expected;
-    this.found = found;
-    this.path = path;
-  }
-};
-function from(a) {
-  return identity(a);
-}
-function string(data) {
-  return decode_string(data);
-}
-function classify(data) {
-  return classify_dynamic(data);
-}
-function int(data) {
-  return decode_int(data);
-}
-function any(decoders) {
-  return (data) => {
-    if (decoders.hasLength(0)) {
-      return new Error(
-        toList([new DecodeError("another type", classify(data), toList([]))])
-      );
-    } else {
-      let decoder2 = decoders.head;
-      let decoders$1 = decoders.tail;
-      let $ = decoder2(data);
-      if ($.isOk()) {
-        let decoded = $[0];
-        return new Ok(decoded);
-      } else {
-        return any(decoders$1)(data);
-      }
-    }
-  };
-}
-function push_path(error, name) {
-  let name$1 = from(name);
-  let decoder2 = any(
-    toList([string, (x) => {
-      return map2(int(x), to_string2);
-    }])
-  );
-  let name$2 = (() => {
-    let $ = decoder2(name$1);
-    if ($.isOk()) {
-      let name$22 = $[0];
-      return name$22;
-    } else {
-      let _pipe = toList(["<", classify(name$1), ">"]);
-      let _pipe$1 = from_strings(_pipe);
-      return to_string3(_pipe$1);
-    }
-  })();
-  return error.withFields({ path: prepend(name$2, error.path) });
-}
-function map_errors(result, f) {
-  return map_error(
-    result,
-    (_capture) => {
-      return map(_capture, f);
-    }
-  );
-}
-function field(name, inner_type) {
-  return (value3) => {
-    let missing_field_error = new DecodeError("field", "nothing", toList([]));
-    return try$(
-      decode_field(value3, name),
-      (maybe_inner) => {
-        let _pipe = maybe_inner;
-        let _pipe$1 = to_result(_pipe, toList([missing_field_error]));
-        let _pipe$2 = try$(_pipe$1, inner_type);
-        return map_errors(
-          _pipe$2,
-          (_capture) => {
-            return push_path(_capture, name);
-          }
-        );
-      }
-    );
-  };
+function update(dict, key, fun) {
+  let _pipe = dict;
+  let _pipe$1 = get(_pipe, key);
+  let _pipe$2 = from_result(_pipe$1);
+  let _pipe$3 = fun(_pipe$2);
+  return ((_capture) => {
+    return insert(dict, key, _capture);
+  })(_pipe$3);
 }
 
 // build/dev/javascript/gleam_stdlib/gleam/string.mjs
@@ -2187,9 +2221,9 @@ var input3 = input2;
 
 // build/dev/javascript/strings/strings.mjs
 var Model = class extends CustomType {
-  constructor(value3) {
+  constructor(x0) {
     super();
-    this.value = value3;
+    this[0] = x0;
   }
 };
 var UserUpdatedMessage = class extends CustomType {
@@ -2208,7 +2242,7 @@ var HashChange = class extends CustomType {
 };
 function init3(_) {
   return [
-    new Model(""),
+    new Model(new$()),
     init2(
       (var0, var1) => {
         return new HashChange(var0, var1);
@@ -2217,25 +2251,47 @@ function init3(_) {
   ];
 }
 function update3(model, msg) {
+  let dct = model[0];
   if (msg instanceof HashChange) {
+    let key = msg.key;
     let value3 = msg.value;
-    return [model.withFields({ value: value3 }), none()];
+    return [
+      new Model(update(dct, key, (_) => {
+        return value3;
+      })),
+      none()
+    ];
   } else {
     let key = msg.key;
     let value3 = msg.value;
     return [
-      model.withFields({ value: value3 }),
+      new Model(update(dct, key, (_) => {
+        return value3;
+      })),
       update2(key, value3)
     ];
   }
 }
 function view(model) {
+  let d = model[0];
+  let $ = get(d, "message");
+  if (!$.isOk()) {
+    throw makeError(
+      "assignment_no_match",
+      "strings",
+      53,
+      "view",
+      "Assignment pattern did not match",
+      { value: $ }
+    );
+  }
+  let out = $[0];
   return field3(
     toList([]),
     toList([text("Write a message:")]),
     input3(
       toList([
-        value(model.value),
+        value(out),
         on_input(
           (value3) => {
             return new UserUpdatedMessage("message", value3);
@@ -2253,7 +2309,7 @@ function main() {
     throw makeError(
       "assignment_no_match",
       "strings",
-      13,
+      14,
       "main",
       "Assignment pattern did not match",
       { value: $ }

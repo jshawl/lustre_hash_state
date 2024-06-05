@@ -1,3 +1,4 @@
+import gleam/dict
 import lustre
 import lustre/attribute
 import lustre/effect
@@ -16,11 +17,11 @@ pub fn main() {
 // MODEL -----------------------------------------------------------------------
 
 type Model {
-  Model(value: String)
+  Model(dict.Dict(String, String))
 }
 
 fn init(_flags) -> #(Model, effect.Effect(Msg)) {
-  #(Model(value: ""), lustre_hash_state.init(HashChange))
+  #(Model(dict.new()), lustre_hash_state.init(HashChange))
 }
 
 // UPDATE ----------------------------------------------------------------------
@@ -31,12 +32,16 @@ pub opaque type Msg {
 }
 
 fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(msg)) {
+  let Model(dct) = model
   case msg {
-    HashChange(_key, value) -> {
-      #(Model(..model, value: value), effect.none())
+    HashChange(key, value) -> {
+      #(Model(dict.update(dct, key, fn(_x) { value })), effect.none())
     }
     UserUpdatedMessage(key, value) -> {
-      #(Model(..model, value: value), lustre_hash_state.update(key, value))
+      #(
+        Model(dict.update(dct, key, fn(_x) { value })),
+        lustre_hash_state.update(key, value),
+      )
     }
   }
 }
@@ -44,11 +49,14 @@ fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(msg)) {
 // VIEW ------------------------------------------------------------------------
 
 fn view(model: Model) -> Element(Msg) {
+  let Model(d) = model
+  let assert Ok(out) = dict.get(d, "message")
+
   ui.field(
     [],
     [element.text("Write a message:")],
     ui.input([
-      attribute.value(model.value),
+      attribute.value(out),
       event.on_input(fn(value) { UserUpdatedMessage("message", value) }),
     ]),
     [],
