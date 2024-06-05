@@ -108,11 +108,6 @@ var BitArray = class _BitArray {
     return new _BitArray(this.buffer.slice(index2));
   }
 };
-var UtfCodepoint = class {
-  constructor(value3) {
-    this.value = value3;
-  }
-};
 function byteArrayToInt(byteArray) {
   byteArray = byteArray.reverse();
   let value3 = 0;
@@ -1207,15 +1202,6 @@ function concat(xs) {
   }
   return result;
 }
-function print_debug(string3) {
-  if (typeof process === "object" && process.stderr?.write) {
-    process.stderr.write(string3 + "\n");
-  } else if (typeof Deno === "object") {
-    Deno.stderr.writeSync(new TextEncoder().encode(string3 + "\n"));
-  } else {
-    console.log(string3);
-  }
-}
 function map_get(map4, key) {
   const value3 = map4.get(key, NOT_FOUND);
   if (value3 === NOT_FOUND) {
@@ -1285,83 +1271,6 @@ function try_get_field(value3, field4, or_else) {
     return or_else();
   }
 }
-function inspect(v) {
-  const t = typeof v;
-  if (v === true)
-    return "True";
-  if (v === false)
-    return "False";
-  if (v === null)
-    return "//js(null)";
-  if (v === void 0)
-    return "Nil";
-  if (t === "string")
-    return JSON.stringify(v);
-  if (t === "bigint" || t === "number")
-    return v.toString();
-  if (Array.isArray(v))
-    return `#(${v.map(inspect).join(", ")})`;
-  if (v instanceof List)
-    return inspectList(v);
-  if (v instanceof UtfCodepoint)
-    return inspectUtfCodepoint(v);
-  if (v instanceof BitArray)
-    return inspectBitArray(v);
-  if (v instanceof CustomType)
-    return inspectCustomType(v);
-  if (v instanceof Dict)
-    return inspectDict(v);
-  if (v instanceof Set)
-    return `//js(Set(${[...v].map(inspect).join(", ")}))`;
-  if (v instanceof RegExp)
-    return `//js(${v})`;
-  if (v instanceof Date)
-    return `//js(Date("${v.toISOString()}"))`;
-  if (v instanceof Function) {
-    const args = [];
-    for (const i of Array(v.length).keys())
-      args.push(String.fromCharCode(i + 97));
-    return `//fn(${args.join(", ")}) { ... }`;
-  }
-  return inspectObject(v);
-}
-function inspectDict(map4) {
-  let body = "dict.from_list([";
-  let first = true;
-  map4.forEach((value3, key) => {
-    if (!first)
-      body = body + ", ";
-    body = body + "#(" + inspect(key) + ", " + inspect(value3) + ")";
-    first = false;
-  });
-  return body + "])";
-}
-function inspectObject(v) {
-  const name = Object.getPrototypeOf(v)?.constructor?.name || "Object";
-  const props = [];
-  for (const k of Object.keys(v)) {
-    props.push(`${inspect(k)}: ${inspect(v[k])}`);
-  }
-  const body = props.length ? " " + props.join(", ") + " " : "";
-  const head = name === "Object" ? "" : name + " ";
-  return `//js(${head}{${body}})`;
-}
-function inspectCustomType(record) {
-  const props = Object.keys(record).map((label2) => {
-    const value3 = inspect(record[label2]);
-    return isNaN(parseInt(label2)) ? `${label2}: ${value3}` : value3;
-  }).join(", ");
-  return props ? `${record.constructor.name}(${props})` : record.constructor.name;
-}
-function inspectList(list) {
-  return `[${list.toArray().map(inspect).join(", ")}]`;
-}
-function inspectBitArray(bits) {
-  return `<<${Array.from(bits.buffer).join(", ")}>>`;
-}
-function inspectUtfCodepoint(codepoint2) {
-  return `//utfcodepoint(${String.fromCodePoint(codepoint2.value)})`;
-}
 
 // build/dev/javascript/gleam_stdlib/gleam/int.mjs
 function to_string2(x) {
@@ -1410,18 +1319,6 @@ function drop_left(string3, num_graphemes) {
   } else {
     return slice(string3, num_graphemes, length2(string3) - num_graphemes);
   }
-}
-function inspect2(term) {
-  let _pipe = inspect(term);
-  return to_string(_pipe);
-}
-
-// build/dev/javascript/gleam_stdlib/gleam/io.mjs
-function debug(term) {
-  let _pipe = term;
-  let _pipe$1 = inspect2(_pipe);
-  print_debug(_pipe$1);
-  return term;
 }
 
 // build/dev/javascript/gleam_stdlib/gleam/bool.mjs
@@ -2376,8 +2273,6 @@ function init3(_) {
   ];
 }
 function update3(model, msg) {
-  debug("received msg:");
-  debug(msg);
   if (msg instanceof HashChange) {
     let value3 = msg.value;
     return [
@@ -2444,7 +2339,7 @@ function main() {
     throw makeError(
       "assignment_no_match",
       "strings",
-      17,
+      16,
       "main",
       "Assignment pattern did not match",
       { value: $ }

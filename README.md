@@ -10,8 +10,35 @@ gleam add lustre_hash_state
 ```gleam
 import lustre_hash_state
 
+pub opaque type Msg {
+  // ...
+  HashChange(value: String)
+}
+
 pub fn main() {
-  // TODO: An example of the project in use
+  let app = lustre.application(init, update, view)
+  let assert Ok(_) = lustre.start(app, "#app", Nil)
+}
+
+fn init(_flags) -> #(Model, effect.Effect(Msg)) {
+  #(Model(), lustre_hash_state.init(HashChange))
+}
+
+fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(msg)) {
+  case msg {
+    // hash change events can update the model
+    HashChange(value) -> {
+      #(Model(..model, value: value), effect.none())
+    }
+    UserUpdatedMessage(value) -> {
+      #(
+        Model(..model, value: value),
+        // and user events can update the hash
+        lustre_hash_state.update(value),
+      )
+    }
+    // ...
+  }
 }
 ```
 
