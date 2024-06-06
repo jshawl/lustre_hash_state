@@ -21,14 +21,17 @@ fn listen(_handler: fn(String) -> Nil) -> Nil
 
 /// Updates the hash value.
 pub fn update(key: String, value: String) -> effect.Effect(msg) {
-  let current_hash = get_hash() |> string.drop_left(1)
-
-  let dct = parse_hash(current_hash)
-  let nextdct = dict.update(dct, key, fn(_) { value })
-  let str = stringify_hash(nextdct)
-  effect.from(fn(_) { set_hash(str) })
+  effect.from(fn(_) {
+    get_hash()
+    |> string.drop_left(1)
+    |> parse_hash()
+    |> dict.update(key, fn(_) { value })
+    |> stringify_hash
+    |> set_hash
+  })
 }
 
+/// Parses a query string into a dict
 pub fn parse_hash(query: String) -> dict.Dict(String, String) {
   string.split(query, "&")
   |> list.map(fn(part) {
@@ -40,6 +43,7 @@ pub fn parse_hash(query: String) -> dict.Dict(String, String) {
   |> dict.from_list
 }
 
+/// Converts a dict to a query string
 pub fn stringify_hash(dct: dict.Dict(String, String)) -> String {
   dict.to_list(dct)
   |> list.map(fn(x) {
