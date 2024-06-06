@@ -2067,18 +2067,18 @@ function stringify_hash(dct) {
   return join2(_pipe$1, "&");
 }
 function update2(key, value3) {
-  let current_hash = (() => {
-    let _pipe = getHash2();
-    return drop_left(_pipe, 1);
-  })();
-  let dct = parse_hash(current_hash);
-  let nextdct = update(dct, key, (_) => {
-    return value3;
-  });
-  let str = stringify_hash(nextdct);
-  return from2((_) => {
-    return setHash(str);
-  });
+  return from2(
+    (_) => {
+      let _pipe = getHash2();
+      let _pipe$1 = drop_left(_pipe, 1);
+      let _pipe$2 = parse_hash(_pipe$1);
+      let _pipe$3 = update(_pipe$2, key, (_2) => {
+        return value3;
+      });
+      let _pipe$4 = stringify_hash(_pipe$3);
+      return setHash(_pipe$4);
+    }
+  );
 }
 function init2(msg) {
   return from2(
