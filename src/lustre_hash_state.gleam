@@ -94,14 +94,14 @@ pub fn init(msg: fn(String, String) -> msg) -> effect.Effect(msg) {
 /// ```
 /// will dipatch the HashChange msg with the decoded value.
 pub fn from_base64(value: String) {
-    case bit_array.base64_url_decode(value) {
-      Error(Nil) -> value
-      Ok(r) ->
-        case bit_array.to_string(r) {
-          Error(Nil) -> value
-          Ok(decoded) -> decoded
-        }
-    }
+  case bit_array.base64_url_decode(value) {
+    Error(Nil) -> value
+    Ok(r) ->
+      case bit_array.to_string(r) {
+        Error(Nil) -> value
+        Ok(decoded) -> decoded
+      }
+  }
 }
 
 /// A convenience method to base64 url encode individual values.
