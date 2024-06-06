@@ -1,6 +1,5 @@
 import gleam/bit_array
 import gleam/dict
-import gleam/io
 import gleam/list
 import gleam/result
 import gleam/string
@@ -75,8 +74,6 @@ pub fn stringify_hash(dct: dict.Dict(String, String)) -> String {
 /// })
 /// ```
 pub fn init(msg: fn(String, String) -> msg) -> effect.Effect(msg) {
-  io.debug("the msg is:")
-  io.debug(msg)
   use dispatch <- effect.from
   use hash <- listen
   parse_hash(hash |> string.drop_left(1))
