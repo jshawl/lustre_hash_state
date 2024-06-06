@@ -1,5 +1,5 @@
 name = "lustre_hash_state"
-version = "0.0.5"
+version = "0.0.6"
 target = "javascript"
 repository = { type = "github", user = "jshawl", repo = "lustre_hash_state" }
 description = "lustre effects for maintaining application state in the hash fragment"
