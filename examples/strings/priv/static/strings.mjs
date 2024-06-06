@@ -2485,8 +2485,8 @@ function from_base64(value3) {
     }
   }
 }
-function to_base64(s) {
-  let _pipe = s;
+function to_base64(value3) {
+  let _pipe = value3;
   let _pipe$1 = bit_array_from_string(_pipe);
   return base64_url_encode(_pipe$1, true);
 }
