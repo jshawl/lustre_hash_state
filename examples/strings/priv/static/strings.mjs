@@ -2470,28 +2470,22 @@ function init2(msg) {
     }
   );
 }
-function with_decoder(f) {
-  return (key, value3) => {
-    debug("value is" + value3);
-    let decoded = (() => {
-      let $ = base64_url_decode(value3);
-      if (!$.isOk() && !$[0]) {
-        return value3;
-      } else {
-        let r = $[0];
-        let $1 = to_string4(r);
-        if (!$1.isOk() && !$1[0]) {
-          return value3;
-        } else {
-          let r$1 = $1[0];
-          return r$1;
-        }
-      }
-    })();
-    return f(key, decoded);
-  };
+function from_base64(value3) {
+  let $ = base64_url_decode(value3);
+  if (!$.isOk() && !$[0]) {
+    return value3;
+  } else {
+    let r = $[0];
+    let $1 = to_string4(r);
+    if (!$1.isOk() && !$1[0]) {
+      return value3;
+    } else {
+      let decoded = $1[0];
+      return decoded;
+    }
+  }
 }
-function with_encoder(s) {
+function to_base64(s) {
   let _pipe = s;
   let _pipe$1 = bit_array_from_string(_pipe);
   return base64_url_encode(_pipe$1, true);
@@ -2763,12 +2757,15 @@ function init3(_) {
   return [
     new Model(new$()),
     init2(
-      (() => {
-        let _pipe = (var0, var1) => {
-          return new HashChange(var0, var1);
-        };
-        return with_decoder(_pipe);
-      })()
+      (key, value3) => {
+        return new HashChange(
+          key,
+          (() => {
+            let _pipe = value3;
+            return from_base64(_pipe);
+          })()
+        );
+      }
     )
   ];
 }
@@ -2794,7 +2791,7 @@ function update3(model, msg) {
         key,
         (() => {
           let _pipe = value3;
-          return with_encoder(_pipe);
+          return to_base64(_pipe);
         })()
       )
     ];

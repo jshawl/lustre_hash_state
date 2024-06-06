@@ -4,6 +4,10 @@ target = "javascript"
 repository = { type = "github", user = "jshawl", repo = "lustre_hash_state" }
 description = "lustre effects for maintaining application state in the hash fragment"
 licences = ["Apache-2.0"]
+links = [
+  { title = "Demo", href = "https://jshawl.github.io/lustre_hash_state/" },
+  { title = "Example", href = "https://github.com/jshawl/lustre_hash_state/blob/main/examples/strings/src/strings.gleam" },
+]
 
 # Fill out these fields if you intend to generate HTML documentation or publish
 # your project to the Hex package manager.

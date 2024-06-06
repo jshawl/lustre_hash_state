@@ -1,11 +1,11 @@
+import gleam/bit_array
 import gleam/dict
+import gleam/io
 import gleam/list
 import gleam/result
 import gleam/string
 import gleam/uri
 import lustre/effect
-import gleam/io
-import gleam/bit_array
 
 /// A convenience method identical to effect.none()
 pub fn noop() {
@@ -61,6 +61,19 @@ pub fn stringify_hash(dct: dict.Dict(String, String)) -> String {
 
 /// The effect to be returned in your init method. Sets up hashchange event
 /// listener and sends messages to update.
+/// 
+/// ## Example
+/// ```gleam
+/// pub opaque type Msg {
+///   HashChange(key: String, value: String)
+/// }
+///
+/// lustre_hash_state.init(HashChange)
+/// // or
+/// lustre_hash_state.init(fn(key: String, value: String) {
+///   HashChange(key, value)
+/// })
+/// ```
 pub fn init(msg: fn(String, String) -> msg) -> effect.Effect(msg) {
   io.debug("the msg is:")
   io.debug(msg)
@@ -71,23 +84,35 @@ pub fn init(msg: fn(String, String) -> msg) -> effect.Effect(msg) {
   Nil
 }
 
-pub fn with_decoder(f: fn(String, String) -> msg) {
-  fn(key: String, value: String){
-    io.debug("value is" <> value)
-    let decoded = case bit_array.base64_url_decode(value) {
+/// A convenience method to base64 url decode individual values.
+/// 
+/// ## Example
+/// ```gleam
+/// lustre_hash_state.init(fn(key: String, value: String) {
+///   HashChange(key, value |> lustre_hash_state.from_base64)
+/// })
+/// ```
+/// will dipatch the HashChange msg with the decoded value.
+pub fn from_base64(value: String) {
+    case bit_array.base64_url_decode(value) {
       Error(Nil) -> value
-      Ok(r) -> case bit_array.to_string(r) {
-        Error(Nil) -> value
-        Ok(r) -> r
-      }
+      Ok(r) ->
+        case bit_array.to_string(r) {
+          Error(Nil) -> value
+          Ok(decoded) -> decoded
+        }
     }
-
-    f(key, decoded)
-  }
 }
 
-pub fn with_encoder(s: String) {
-  s
+/// A convenience method to base64 url encode individual values.
+/// 
+/// ## Example
+/// ```gleam
+/// lustre_hash_state.update(key, value |> lustre_hash_state.to_base64)
+/// ```
+/// will update the hash value as a base64 url encoded string.
+pub fn to_base64(value: String) {
+  value
   |> bit_array.from_string
-  |> bit_array.base64_url_encode(True) 
+  |> bit_array.base64_url_encode(True)
 }
