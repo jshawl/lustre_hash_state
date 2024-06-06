@@ -1209,6 +1209,16 @@ function graphemes_iterator(string3) {
 function split(xs, pattern) {
   return List.fromArray(xs.split(pattern));
 }
+function join(xs, separator) {
+  const iterator = xs[Symbol.iterator]();
+  let result = iterator.next().value || "";
+  let current = iterator.next();
+  while (!current.done) {
+    result = result + separator + current.value;
+    current = iterator.next();
+  }
+  return result;
+}
 function concat(xs) {
   let result = "";
   for (const x of xs) {
@@ -1218,6 +1228,9 @@ function concat(xs) {
 }
 function new_map() {
   return Dict.new();
+}
+function map_to_list(map4) {
+  return List.fromArray(map4.entries());
 }
 function map_get(map4, key) {
   const value3 = map4.get(key, NOT_FOUND);
@@ -1302,6 +1315,23 @@ function get(from3, get2) {
 function insert(dict, key, value3) {
   return map_insert(key, value3, dict);
 }
+function fold_list_of_pair(loop$list, loop$initial) {
+  while (true) {
+    let list = loop$list;
+    let initial = loop$initial;
+    if (list.hasLength(0)) {
+      return initial;
+    } else {
+      let x = list.head;
+      let rest = list.tail;
+      loop$list = rest;
+      loop$initial = insert(initial, x[0], x[1]);
+    }
+  }
+}
+function from_list(list) {
+  return fold_list_of_pair(list, new$());
+}
 function update(dict, key, fun) {
   let _pipe = dict;
   let _pipe$1 = get(_pipe, key);
@@ -1310,6 +1340,38 @@ function update(dict, key, fun) {
   return ((_capture) => {
     return insert(dict, key, _capture);
   })(_pipe$3);
+}
+function do_fold(loop$list, loop$initial, loop$fun) {
+  while (true) {
+    let list = loop$list;
+    let initial = loop$initial;
+    let fun = loop$fun;
+    if (list.hasLength(0)) {
+      return initial;
+    } else {
+      let k = list.head[0];
+      let v = list.head[1];
+      let rest = list.tail;
+      loop$list = rest;
+      loop$initial = fun(initial, k, v);
+      loop$fun = fun;
+    }
+  }
+}
+function fold(dict, initial, fun) {
+  let _pipe = dict;
+  let _pipe$1 = map_to_list(_pipe);
+  return do_fold(_pipe$1, initial, fun);
+}
+function do_map_values(f, dict) {
+  let f$1 = (dict2, k, v) => {
+    return insert(dict2, k, f(k, v));
+  };
+  let _pipe = dict;
+  return fold(_pipe, new$(), f$1);
+}
+function map_values(dict, fun) {
+  return do_map_values(fun, dict);
 }
 
 // build/dev/javascript/gleam_stdlib/gleam/string.mjs
@@ -1320,6 +1382,9 @@ function concat3(strings) {
   let _pipe = strings;
   let _pipe$1 = from_strings(_pipe);
   return to_string3(_pipe$1);
+}
+function join2(strings, separator) {
+  return join(strings, separator);
 }
 function do_slice(string3, idx, len) {
   let _pipe = string3;
@@ -1968,9 +2033,51 @@ var listen = (dispatch) => {
 };
 
 // build/dev/javascript/lustre_hash_state/lustre_hash_state.mjs
+function parse_hash(query) {
+  let _pipe = split3(query, "&");
+  let _pipe$1 = map(
+    _pipe,
+    (part) => {
+      let $ = split3(part, "=");
+      if ($.hasLength(2)) {
+        let key = $.head;
+        let value3 = $.tail.head;
+        return [key, value3];
+      } else if ($.hasLength(0)) {
+        return ["", ""];
+      } else if ($.hasLength(1)) {
+        return ["", ""];
+      } else {
+        return ["", ""];
+      }
+    }
+  );
+  return from_list(_pipe$1);
+}
+function stringify_hash(dct) {
+  let _pipe = map_to_list(dct);
+  let _pipe$1 = map(
+    _pipe,
+    (x) => {
+      let key = x[0];
+      let value3 = x[1];
+      return key + "=" + value3;
+    }
+  );
+  return join2(_pipe$1, "&");
+}
 function update2(key, value3) {
+  let current_hash = (() => {
+    let _pipe = getHash2();
+    return drop_left(_pipe, 1);
+  })();
+  let dct = parse_hash(current_hash);
+  let nextdct = update(dct, key, (_) => {
+    return value3;
+  });
+  let str = stringify_hash(nextdct);
   return from2((_) => {
-    return setHash(key + "=" + value3);
+    return setHash(str);
   });
 }
 function init2(msg) {
@@ -1978,23 +2085,19 @@ function init2(msg) {
     (dispatch) => {
       return listen(
         (hash) => {
-          let $ = split3(
+          let _pipe = parse_hash(
             (() => {
-              let _pipe = hash;
-              return drop_left(_pipe, 1);
-            })(),
-            "="
+              let _pipe2 = hash;
+              return drop_left(_pipe2, 1);
+            })()
           );
-          if ($.hasLength(0)) {
-            return void 0;
-          } else if ($.hasLength(2)) {
-            let key = $.head;
-            let value3 = $.tail.head;
-            let _pipe = msg(key, value3);
-            return dispatch(_pipe);
-          } else {
-            return void 0;
-          }
+          map_values(
+            _pipe,
+            (key, value3) => {
+              return dispatch(msg(key, value3));
+            }
+          );
+          return void 0;
         }
       );
     }
@@ -2305,7 +2408,7 @@ function view(model) {
         toList([text("Write a message:")]),
         input3(
           toList([
-            value(unwrap(get(dct, "message"), "error")),
+            value(unwrap(get(dct, "message"), "")),
             on_input(
               (value3) => {
                 return new UserUpdatedMessage("message", value3);
@@ -2320,7 +2423,7 @@ function view(model) {
         toList([text("Write another message:")]),
         input3(
           toList([
-            value(unwrap(get(dct, "message"), "error")),
+            value(unwrap(get(dct, "message2"), "")),
             on_input(
               (value3) => {
                 return new UserUpdatedMessage("message2", value3);

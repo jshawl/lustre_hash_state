@@ -57,7 +57,7 @@ fn view(model: Model) -> Element(Msg) {
       [],
       [element.text("Write a message:")],
       ui.input([
-        attribute.value(result.unwrap(dict.get(dct, "message"), "error")),
+        attribute.value(result.unwrap(dict.get(dct, "message"), "")),
         event.on_input(fn(value) { UserUpdatedMessage("message", value) }),
       ]),
       [],
@@ -66,7 +66,7 @@ fn view(model: Model) -> Element(Msg) {
       [],
       [element.text("Write another message:")],
       ui.input([
-        attribute.value(result.unwrap(dict.get(dct, "message"), "error")),
+        attribute.value(result.unwrap(dict.get(dct, "message2"), "")),
         event.on_input(fn(value) { UserUpdatedMessage("message2", value) }),
       ]),
       [],
