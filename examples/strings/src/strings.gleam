@@ -1,12 +1,11 @@
-import gleam/int
-import gleam/string
+import gleam/dict
+import gleam/result
 import lustre
 import lustre/attribute
 import lustre/effect
 import lustre/element.{type Element}
 import lustre/event
 import lustre/ui
-import lustre/ui/layout/aside
 import lustre_hash_state
 
 // MAIN ------------------------------------------------------------------------
@@ -19,64 +18,58 @@ pub fn main() {
 // MODEL -----------------------------------------------------------------------
 
 type Model {
-  Model(value: String, length: Int, max: Int)
+  Model(dict.Dict(String, String))
 }
 
 fn init(_flags) -> #(Model, effect.Effect(Msg)) {
-  #(Model(value: "", length: 0, max: 10), lustre_hash_state.init(HashChange))
+  #(Model(dict.new()), lustre_hash_state.init(HashChange))
 }
 
 // UPDATE ----------------------------------------------------------------------
 
 pub opaque type Msg {
-  UserUpdatedMessage(value: String)
-  UserResetMessage
-  HashChange(value: String)
+  UserUpdatedMessage(key: String, value: String)
+  HashChange(key: String, value: String)
 }
 
 fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(msg)) {
+  let Model(dct) = model
   case msg {
-    HashChange(value) -> {
-      #(Model(..model, value: value), effect.none())
+    HashChange(key, value) -> {
+      #(Model(dict.update(dct, key, fn(_x) { value })), effect.none())
     }
-    UserUpdatedMessage(value) -> {
-      let length = string.length(value)
+    UserUpdatedMessage(key, value) -> {
       #(
-        case length <= model.max {
-          True -> Model(..model, value: value, length: length)
-          False -> model
-        },
-        lustre_hash_state.update(value),
+        Model(dict.update(dct, key, fn(_x) { value })),
+        lustre_hash_state.update(key, value),
       )
     }
-    UserResetMessage -> #(
-      Model(..model, value: "", length: 0),
-      lustre_hash_state.update(""),
-    )
   }
 }
 
 // VIEW ------------------------------------------------------------------------
 
 fn view(model: Model) -> Element(Msg) {
-  let styles = [#("width", "100vw"), #("height", "100vh"), #("padding", "1rem")]
-  let length = int.to_string(model.length)
-  let max = int.to_string(model.max)
+  let Model(dct) = model
 
-  ui.centre(
-    [attribute.style(styles)],
-    ui.aside(
-      [aside.content_first(), aside.align_centre()],
-      ui.field(
-        [],
-        [element.text("Write a message:")],
-        ui.input([
-          attribute.value(model.value),
-          event.on_input(UserUpdatedMessage),
-        ]),
-        [element.text(length <> "/" <> max)],
-      ),
-      ui.button([event.on_click(UserResetMessage)], [element.text("Reset")]),
+  ui.group([], [
+    ui.field(
+      [],
+      [element.text("Write a message:")],
+      ui.input([
+        attribute.value(result.unwrap(dict.get(dct, "message"), "")),
+        event.on_input(fn(value) { UserUpdatedMessage("message", value) }),
+      ]),
+      [],
     ),
-  )
+    ui.field(
+      [],
+      [element.text("Write another message:")],
+      ui.input([
+        attribute.value(result.unwrap(dict.get(dct, "message2"), "")),
+        event.on_input(fn(value) { UserUpdatedMessage("message2", value) }),
+      ]),
+      [],
+    ),
+  ])
 }

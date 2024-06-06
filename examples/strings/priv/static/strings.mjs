@@ -239,6 +239,19 @@ function to_result(option, e) {
     return new Error(e);
   }
 }
+function from_result(result) {
+  if (result.isOk()) {
+    let a = result[0];
+    return new Some(a);
+  } else {
+    return new None();
+  }
+}
+
+// build/dev/javascript/gleam_stdlib/gleam/int.mjs
+function to_string2(x) {
+  return to_string(x);
+}
 
 // build/dev/javascript/gleam_stdlib/gleam/list.mjs
 function do_reverse(loop$remaining, loop$accumulator) {
@@ -319,22 +332,6 @@ function do_take(loop$list, loop$n, loop$acc) {
 function take(list, n) {
   return do_take(list, n, toList([]));
 }
-function fold(loop$list, loop$initial, loop$fun) {
-  while (true) {
-    let list = loop$list;
-    let initial = loop$initial;
-    let fun = loop$fun;
-    if (list.hasLength(0)) {
-      return initial;
-    } else {
-      let x = list.head;
-      let rest$1 = list.tail;
-      loop$list = rest$1;
-      loop$initial = fun(initial, x);
-      loop$fun = fun;
-    }
-  }
-}
 
 // build/dev/javascript/gleam_stdlib/gleam/result.mjs
 function map2(result, fun) {
@@ -364,13 +361,27 @@ function try$(result, fun) {
     return new Error(e);
   }
 }
+function unwrap(result, default$) {
+  if (result.isOk()) {
+    let v = result[0];
+    return v;
+  } else {
+    return default$;
+  }
+}
 
 // build/dev/javascript/gleam_stdlib/gleam/string_builder.mjs
 function from_strings(strings) {
   return concat(strings);
 }
-function to_string(builder) {
+function from_string(string3) {
+  return identity(string3);
+}
+function to_string3(builder) {
   return identity(builder);
+}
+function split2(iodata, pattern) {
+  return split(iodata, pattern);
 }
 
 // build/dev/javascript/gleam_stdlib/gleam/dynamic.mjs
@@ -428,7 +439,7 @@ function push_path(error, name) {
     } else {
       let _pipe = toList(["<", classify(name$1), ">"]);
       let _pipe$1 = from_strings(_pipe);
-      return to_string(_pipe$1);
+      return to_string3(_pipe$1);
     }
   })();
   return error.withFields({ path: prepend(name$2, error.path) });
@@ -1164,7 +1175,7 @@ var NOT_FOUND = {};
 function identity(x) {
   return x;
 }
-function to_string3(term) {
+function to_string(term) {
   return term.toString();
 }
 function string_length(string3) {
@@ -1195,6 +1206,19 @@ function graphemes_iterator(string3) {
     return new Intl.Segmenter().segment(string3)[Symbol.iterator]();
   }
 }
+function split(xs, pattern) {
+  return List.fromArray(xs.split(pattern));
+}
+function join(xs, separator) {
+  const iterator = xs[Symbol.iterator]();
+  let result = iterator.next().value || "";
+  let current = iterator.next();
+  while (!current.done) {
+    result = result + separator + current.value;
+    current = iterator.next();
+  }
+  return result;
+}
 function concat(xs) {
   let result = "";
   for (const x of xs) {
@@ -1202,12 +1226,21 @@ function concat(xs) {
   }
   return result;
 }
+function new_map() {
+  return Dict.new();
+}
+function map_to_list(map4) {
+  return List.fromArray(map4.entries());
+}
 function map_get(map4, key) {
   const value3 = map4.get(key, NOT_FOUND);
   if (value3 === NOT_FOUND) {
     return new Error(Nil);
   }
   return new Ok(value3);
+}
+function map_insert(key, value3, map4) {
+  return map4.set(key, value3);
 }
 function classify_dynamic(data) {
   if (typeof data === "string") {
@@ -1272,9 +1305,73 @@ function try_get_field(value3, field4, or_else) {
   }
 }
 
-// build/dev/javascript/gleam_stdlib/gleam/int.mjs
-function to_string2(x) {
-  return to_string3(x);
+// build/dev/javascript/gleam_stdlib/gleam/dict.mjs
+function new$() {
+  return new_map();
+}
+function get(from3, get2) {
+  return map_get(from3, get2);
+}
+function insert(dict, key, value3) {
+  return map_insert(key, value3, dict);
+}
+function fold_list_of_pair(loop$list, loop$initial) {
+  while (true) {
+    let list = loop$list;
+    let initial = loop$initial;
+    if (list.hasLength(0)) {
+      return initial;
+    } else {
+      let x = list.head;
+      let rest = list.tail;
+      loop$list = rest;
+      loop$initial = insert(initial, x[0], x[1]);
+    }
+  }
+}
+function from_list(list) {
+  return fold_list_of_pair(list, new$());
+}
+function update(dict, key, fun) {
+  let _pipe = dict;
+  let _pipe$1 = get(_pipe, key);
+  let _pipe$2 = from_result(_pipe$1);
+  let _pipe$3 = fun(_pipe$2);
+  return ((_capture) => {
+    return insert(dict, key, _capture);
+  })(_pipe$3);
+}
+function do_fold(loop$list, loop$initial, loop$fun) {
+  while (true) {
+    let list = loop$list;
+    let initial = loop$initial;
+    let fun = loop$fun;
+    if (list.hasLength(0)) {
+      return initial;
+    } else {
+      let k = list.head[0];
+      let v = list.head[1];
+      let rest = list.tail;
+      loop$list = rest;
+      loop$initial = fun(initial, k, v);
+      loop$fun = fun;
+    }
+  }
+}
+function fold(dict, initial, fun) {
+  let _pipe = dict;
+  let _pipe$1 = map_to_list(_pipe);
+  return do_fold(_pipe$1, initial, fun);
+}
+function do_map_values(f, dict) {
+  let f$1 = (dict2, k, v) => {
+    return insert(dict2, k, f(k, v));
+  };
+  let _pipe = dict;
+  return fold(_pipe, new$(), f$1);
+}
+function map_values(dict, fun) {
+  return do_map_values(fun, dict);
 }
 
 // build/dev/javascript/gleam_stdlib/gleam/string.mjs
@@ -1284,7 +1381,10 @@ function length2(string3) {
 function concat3(strings) {
   let _pipe = strings;
   let _pipe$1 = from_strings(_pipe);
-  return to_string(_pipe$1);
+  return to_string3(_pipe$1);
+}
+function join2(strings, separator) {
+  return join(strings, separator);
 }
 function do_slice(string3, idx, len) {
   let _pipe = string3;
@@ -1318,6 +1418,16 @@ function drop_left(string3, num_graphemes) {
     return string3;
   } else {
     return slice(string3, num_graphemes, length2(string3) - num_graphemes);
+  }
+}
+function split3(x, substring) {
+  if (substring === "") {
+    return graphemes(x);
+  } else {
+    let _pipe = x;
+    let _pipe$1 = from_string(_pipe);
+    let _pipe$2 = split2(_pipe$1, substring);
+    return map(_pipe$2, to_string3);
   }
 }
 
@@ -1388,25 +1498,8 @@ function attribute(name, value3) {
 function on(name, handler) {
   return new Event("on" + name, handler);
 }
-function style(properties) {
-  return attribute(
-    "style",
-    fold(
-      properties,
-      "",
-      (styles, _use1) => {
-        let name$1 = _use1[0];
-        let value$1 = _use1[1];
-        return styles + name$1 + ":" + value$1 + ";";
-      }
-    )
-  );
-}
 function class$(name) {
   return attribute("class", name);
-}
-function type_(name) {
-  return attribute("type", name);
 }
 function value(val) {
   return attribute("value", val);
@@ -1909,11 +2002,6 @@ function start3(app, selector, flags) {
 function on2(name, handler) {
   return on(name, handler);
 }
-function on_click(msg) {
-  return on2("click", (_) => {
-    return new Ok(msg);
-  });
-}
 function value2(event2) {
   let _pipe = event2;
   return field("target", field("value", string))(
@@ -1945,23 +2033,71 @@ var listen = (dispatch) => {
 };
 
 // build/dev/javascript/lustre_hash_state/lustre_hash_state.mjs
-function update2(s) {
-  return from2(
-    (_) => {
-      let _pipe = s;
-      return setHash(_pipe);
+function parse_hash(query) {
+  let _pipe = split3(query, "&");
+  let _pipe$1 = map(
+    _pipe,
+    (part) => {
+      let $ = split3(part, "=");
+      if ($.hasLength(2)) {
+        let key = $.head;
+        let value3 = $.tail.head;
+        return [key, value3];
+      } else if ($.hasLength(0)) {
+        return ["", ""];
+      } else if ($.hasLength(1)) {
+        return ["", ""];
+      } else {
+        return ["", ""];
+      }
     }
   );
+  return from_list(_pipe$1);
+}
+function stringify_hash(dct) {
+  let _pipe = map_to_list(dct);
+  let _pipe$1 = map(
+    _pipe,
+    (x) => {
+      let key = x[0];
+      let value3 = x[1];
+      return key + "=" + value3;
+    }
+  );
+  return join2(_pipe$1, "&");
+}
+function update2(key, value3) {
+  let current_hash = (() => {
+    let _pipe = getHash2();
+    return drop_left(_pipe, 1);
+  })();
+  let dct = parse_hash(current_hash);
+  let nextdct = update(dct, key, (_) => {
+    return value3;
+  });
+  let str = stringify_hash(nextdct);
+  return from2((_) => {
+    return setHash(str);
+  });
 }
 function init2(msg) {
   return from2(
     (dispatch) => {
       return listen(
         (hash) => {
-          let _pipe = hash;
-          let _pipe$1 = drop_left(_pipe, 1);
-          let _pipe$2 = msg(_pipe$1);
-          return dispatch(_pipe$2);
+          let _pipe = parse_hash(
+            (() => {
+              let _pipe2 = hash;
+              return drop_left(_pipe2, 1);
+            })()
+          );
+          map_values(
+            _pipe,
+            (key, value3) => {
+              return dispatch(msg(key, value3));
+            }
+          );
+          return void 0;
         }
       );
     }
@@ -1975,25 +2111,11 @@ function div(attrs, children) {
 function span(attrs, children) {
   return element("span", attrs, children);
 }
-function button(attrs, children) {
-  return element("button", attrs, children);
-}
 function input(attrs) {
   return element("input", attrs, toList([]));
 }
 function label(attrs, children) {
   return element("label", attrs, children);
-}
-
-// build/dev/javascript/lustre_ui/lustre/ui/button.mjs
-function button2(attributes, children) {
-  return button(
-    prepend(
-      class$("lustre-ui-button"),
-      prepend(type_("button"), attributes)
-    ),
-    children
-  );
 }
 
 // build/dev/javascript/lustre_ui/lustre/ui/layout/stack.mjs
@@ -2033,32 +2155,15 @@ function input2(attributes) {
   );
 }
 
-// build/dev/javascript/lustre_ui/lustre/ui/layout/aside.mjs
-function of3(element2, attributes, side, main2) {
+// build/dev/javascript/lustre_ui/lustre/ui/layout/group.mjs
+function of3(element2, attributes, children) {
   return element2(
-    prepend(class$("lustre-ui-aside"), attributes),
-    toList([side, main2])
+    prepend(class$("lustre-ui-group"), attributes),
+    children
   );
 }
-function aside(attributes, side, main2) {
-  return of3(div, attributes, side, main2);
-}
-function content_first() {
-  return class$("content-first");
-}
-function align_centre() {
-  return class$("align-centre");
-}
-
-// build/dev/javascript/lustre_ui/lustre/ui/layout/centre.mjs
-function of4(element2, attributes, children) {
-  return element2(
-    prepend(class$("lustre-ui-centre"), attributes),
-    toList([children])
-  );
-}
-function centre(attributes, children) {
-  return of4(div, attributes, children);
+function group(attributes, children) {
+  return of3(div, attributes, children);
 }
 
 // build/dev/javascript/gleam_community_colour/gleam_community/colour.mjs
@@ -2236,98 +2341,99 @@ var dark_charcoal = new Rgba(
 var pink = new Rgba(1, 0.6862745098039216, 0.9529411764705882, 1);
 
 // build/dev/javascript/lustre_ui/lustre/ui.mjs
-var aside2 = aside;
-var button3 = button2;
-var centre2 = centre;
 var field3 = field2;
+var group2 = group;
 var input3 = input2;
 
 // build/dev/javascript/strings/strings.mjs
 var Model = class extends CustomType {
-  constructor(value3, length3, max2) {
+  constructor(x0) {
     super();
-    this.value = value3;
-    this.length = length3;
-    this.max = max2;
+    this[0] = x0;
   }
 };
 var UserUpdatedMessage = class extends CustomType {
-  constructor(value3) {
+  constructor(key, value3) {
     super();
+    this.key = key;
     this.value = value3;
   }
 };
-var UserResetMessage = class extends CustomType {
-};
 var HashChange = class extends CustomType {
-  constructor(value3) {
+  constructor(key, value3) {
     super();
+    this.key = key;
     this.value = value3;
   }
 };
 function init3(_) {
   return [
-    new Model("", 0, 10),
-    init2((var0) => {
-      return new HashChange(var0);
-    })
+    new Model(new$()),
+    init2(
+      (var0, var1) => {
+        return new HashChange(var0, var1);
+      }
+    )
   ];
 }
 function update3(model, msg) {
+  let dct = model[0];
   if (msg instanceof HashChange) {
+    let key = msg.key;
     let value3 = msg.value;
-    return [model.withFields({ value: value3 }), none()];
-  } else if (msg instanceof UserUpdatedMessage) {
-    let value3 = msg.value;
-    let length3 = length2(value3);
     return [
-      (() => {
-        let $ = length3 <= model.max;
-        if ($) {
-          return model.withFields({ value: value3, length: length3 });
-        } else {
-          return model;
-        }
-      })(),
-      update2(value3)
+      new Model(update(dct, key, (_) => {
+        return value3;
+      })),
+      none()
     ];
   } else {
+    let key = msg.key;
+    let value3 = msg.value;
     return [
-      model.withFields({ value: "", length: 0 }),
-      update2("")
+      new Model(update(dct, key, (_) => {
+        return value3;
+      })),
+      update2(key, value3)
     ];
   }
 }
 function view(model) {
-  let styles = toList([
-    ["width", "100vw"],
-    ["height", "100vh"],
-    ["padding", "1rem"]
-  ]);
-  let length3 = to_string2(model.length);
-  let max2 = to_string2(model.max);
-  return centre2(
-    toList([style(styles)]),
-    aside2(
-      toList([content_first(), align_centre()]),
+  let dct = model[0];
+  return group2(
+    toList([]),
+    toList([
       field3(
         toList([]),
         toList([text("Write a message:")]),
         input3(
           toList([
-            value(model.value),
-            on_input((var0) => {
-              return new UserUpdatedMessage(var0);
-            })
+            value(unwrap(get(dct, "message"), "")),
+            on_input(
+              (value3) => {
+                return new UserUpdatedMessage("message", value3);
+              }
+            )
           ])
         ),
-        toList([text(length3 + "/" + max2)])
+        toList([])
       ),
-      button3(
-        toList([on_click(new UserResetMessage())]),
-        toList([text("Reset")])
+      field3(
+        toList([]),
+        toList([text("Write another message:")]),
+        input3(
+          toList([
+            value(unwrap(get(dct, "message2"), "")),
+            on_input(
+              (value3) => {
+                return new UserUpdatedMessage("message2", value3);
+              }
+            )
+          ])
+        ),
+        toList([])
       )
-    )
+    ])
   );
 }
 function main() {
@@ -2337,7 +2443,7 @@ function main() {
     throw makeError(
       "assignment_no_match",
       "strings",
-      16,
+      15,
       "main",
       "Assignment pattern did not match",
       { value: $ }
