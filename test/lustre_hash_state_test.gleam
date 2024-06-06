@@ -33,3 +33,15 @@ pub fn encoded_stringify_hash_test() {
   |> lustre_hash_state.stringify_hash
   |> should.equal("key='%25'%20rocks%3B")
 }
+
+pub fn from_base64_test() {
+  "eWF5IQ=="
+  |> lustre_hash_state.from_base64
+  |> should.equal("yay!")
+}
+
+pub fn to_base64_test() {
+  "yay!"
+  |> lustre_hash_state.to_base64
+  |> should.equal("eWF5IQ==")
+}
