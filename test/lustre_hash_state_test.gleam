@@ -17,6 +17,11 @@ pub fn encoded_parse_hash_test() {
   |> should.equal(dict.from_list([#("key", "value with spaces")]))
 }
 
+pub fn parse_empty_hash_test() {
+  lustre_hash_state.parse_hash("")
+  |> should.equal(dict.from_list([]))
+}
+
 pub fn stringify_hash_test() {
   dict.from_list([#("one", "1"), #("two", "2")])
   |> lustre_hash_state.stringify_hash

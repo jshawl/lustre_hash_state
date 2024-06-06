@@ -36,16 +36,15 @@ pub fn update(key: String, value: String) -> effect.Effect(msg) {
 /// Parses a query string into a dict
 pub fn parse_hash(query: String) -> dict.Dict(String, String) {
   string.split(query, "&")
-  |> list.map(fn(part) {
-    case string.split(part, "=") {
-      [key, value] -> #(
-        key,
-        value |> uri.percent_decode |> result.unwrap(value),
-      )
-      [] | [_] | _ -> #("", "")
+  |> list.fold(dict.new(), fn(accumulator, element) {
+    case string.split(element, "=") {
+      [key, value] ->
+        dict.update(accumulator, key, fn(_) {
+          value |> uri.percent_decode |> result.unwrap(value)
+        })
+      [] | [_] | _ -> accumulator
     }
   })
-  |> dict.from_list
 }
 
 /// Converts a dict to a query string
