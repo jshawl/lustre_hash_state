@@ -332,6 +332,22 @@ function do_take(loop$list, loop$n, loop$acc) {
 function take(list, n) {
   return do_take(list, n, toList([]));
 }
+function fold(loop$list, loop$initial, loop$fun) {
+  while (true) {
+    let list = loop$list;
+    let initial = loop$initial;
+    let fun = loop$fun;
+    if (list.hasLength(0)) {
+      return initial;
+    } else {
+      let x = list.head;
+      let rest$1 = list.tail;
+      loop$list = rest$1;
+      loop$initial = fun(initial, x);
+      loop$fun = fun;
+    }
+  }
+}
 
 // build/dev/javascript/gleam_stdlib/gleam/result.mjs
 function map2(result, fun) {
@@ -1328,23 +1344,6 @@ function get(from3, get2) {
 function insert(dict, key, value3) {
   return map_insert(key, value3, dict);
 }
-function fold_list_of_pair(loop$list, loop$initial) {
-  while (true) {
-    let list = loop$list;
-    let initial = loop$initial;
-    if (list.hasLength(0)) {
-      return initial;
-    } else {
-      let x = list.head;
-      let rest = list.tail;
-      loop$list = rest;
-      loop$initial = insert(initial, x[0], x[1]);
-    }
-  }
-}
-function from_list(list) {
-  return fold_list_of_pair(list, new$());
-}
 function update(dict, key, fun) {
   let _pipe = dict;
   let _pipe$1 = get(_pipe, key);
@@ -1371,7 +1370,7 @@ function do_fold(loop$list, loop$initial, loop$fun) {
     }
   }
 }
-function fold(dict, initial, fun) {
+function fold2(dict, initial, fun) {
   let _pipe = dict;
   let _pipe$1 = map_to_list(_pipe);
   return do_fold(_pipe$1, initial, fun);
@@ -1381,7 +1380,7 @@ function do_map_values(f, dict) {
     return insert(dict2, k, f(k, v));
   };
   let _pipe = dict;
-  return fold(_pipe, new$(), f$1);
+  return fold2(_pipe, new$(), f$1);
 }
 function map_values(dict, fun) {
   return do_map_values(fun, dict);
@@ -2056,31 +2055,32 @@ var listen = (dispatch) => {
 // build/dev/javascript/lustre_hash_state/lustre_hash_state.mjs
 function parse_hash(query) {
   let _pipe = split3(query, "&");
-  let _pipe$1 = map(
+  return fold(
     _pipe,
-    (part) => {
-      let $ = split3(part, "=");
+    new$(),
+    (accumulator, element2) => {
+      let $ = split3(element2, "=");
       if ($.hasLength(2)) {
         let key = $.head;
         let value3 = $.tail.head;
-        return [
+        return update(
+          accumulator,
           key,
-          (() => {
-            let _pipe$12 = value3;
-            let _pipe$2 = percent_decode2(_pipe$12);
+          (_) => {
+            let _pipe$1 = value3;
+            let _pipe$2 = percent_decode2(_pipe$1);
             return unwrap(_pipe$2, value3);
-          })()
-        ];
+          }
+        );
       } else if ($.hasLength(0)) {
-        return ["", ""];
+        return accumulator;
       } else if ($.hasLength(1)) {
-        return ["", ""];
+        return accumulator;
       } else {
-        return ["", ""];
+        return accumulator;
       }
     }
   );
-  return from_list(_pipe$1);
 }
 function stringify_hash(dct) {
   let _pipe = map_to_list(dct);
