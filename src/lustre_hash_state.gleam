@@ -1,6 +1,8 @@
 import gleam/dict
 import gleam/list
+import gleam/result
 import gleam/string
+import gleam/uri
 import lustre/effect
 
 /// A convenience method identical to effect.none()
@@ -36,7 +38,10 @@ pub fn parse_hash(query: String) -> dict.Dict(String, String) {
   string.split(query, "&")
   |> list.map(fn(part) {
     case string.split(part, "=") {
-      [key, value] -> #(key, value)
+      [key, value] -> #(
+        key,
+        value |> uri.percent_decode |> result.unwrap(value),
+      )
       [] | [_] | _ -> #("", "")
     }
   })
@@ -48,7 +53,7 @@ pub fn stringify_hash(dct: dict.Dict(String, String)) -> String {
   dict.to_list(dct)
   |> list.map(fn(x) {
     let #(key, value) = x
-    key <> "=" <> value
+    key <> "=" <> value |> uri.percent_encode
   })
   |> string.join("&")
 }

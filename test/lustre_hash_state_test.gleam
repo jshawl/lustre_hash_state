@@ -12,8 +12,19 @@ pub fn parse_hash_test() {
   |> should.equal(dict.from_list([#("one", "1"), #("two", "2")]))
 }
 
+pub fn encoded_parse_hash_test() {
+  lustre_hash_state.parse_hash("key=value%20with%20spaces")
+  |> should.equal(dict.from_list([#("key", "value with spaces")]))
+}
+
 pub fn stringify_hash_test() {
   dict.from_list([#("one", "1"), #("two", "2")])
   |> lustre_hash_state.stringify_hash
   |> should.equal("one=1&two=2")
+}
+
+pub fn encoded_stringify_hash_test() {
+  dict.from_list([#("key", "'%' rocks;")])
+  |> lustre_hash_state.stringify_hash
+  |> should.equal("key='%25'%20rocks%3B")
 }
