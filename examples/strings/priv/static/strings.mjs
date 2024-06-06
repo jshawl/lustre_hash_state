@@ -40,10 +40,10 @@ var List = class {
     return desired === 0;
   }
   countLength() {
-    let length3 = 0;
+    let length4 = 0;
     for (let _ of this)
-      length3++;
-    return length3;
+      length4++;
+    return length4;
   }
 };
 function prepend(element2, tail) {
@@ -1229,18 +1229,31 @@ function concat(xs) {
 function new_map() {
   return Dict.new();
 }
-function map_to_list(map4) {
-  return List.fromArray(map4.entries());
+function map_to_list(map5) {
+  return List.fromArray(map5.entries());
 }
-function map_get(map4, key) {
-  const value3 = map4.get(key, NOT_FOUND);
+function map_get(map5, key) {
+  const value3 = map5.get(key, NOT_FOUND);
   if (value3 === NOT_FOUND) {
     return new Error(Nil);
   }
   return new Ok(value3);
 }
-function map_insert(key, value3, map4) {
-  return map4.set(key, value3);
+function map_insert(key, value3, map5) {
+  return map5.set(key, value3);
+}
+function unsafe_percent_decode(string3) {
+  return decodeURIComponent((string3 || "").replace("+", " "));
+}
+function percent_decode(string3) {
+  try {
+    return new Ok(unsafe_percent_decode(string3));
+  } catch {
+    return new Error(Nil);
+  }
+}
+function percent_encode(string3) {
+  return encodeURIComponent(string3);
 }
 function classify_dynamic(data) {
   if (typeof data === "string") {
@@ -2018,6 +2031,14 @@ function on_input(msg) {
   );
 }
 
+// build/dev/javascript/gleam_stdlib/gleam/uri.mjs
+function percent_encode2(value3) {
+  return percent_encode(value3);
+}
+function percent_decode2(value3) {
+  return percent_decode(value3);
+}
+
 // build/dev/javascript/lustre_hash_state/ffi.mjs
 var setHash = (value3) => {
   if (globalThis.location) {
@@ -2042,7 +2063,14 @@ function parse_hash(query) {
       if ($.hasLength(2)) {
         let key = $.head;
         let value3 = $.tail.head;
-        return [key, value3];
+        return [
+          key,
+          (() => {
+            let _pipe$12 = value3;
+            let _pipe$2 = percent_decode2(_pipe$12);
+            return unwrap(_pipe$2, value3);
+          })()
+        ];
       } else if ($.hasLength(0)) {
         return ["", ""];
       } else if ($.hasLength(1)) {
@@ -2061,7 +2089,10 @@ function stringify_hash(dct) {
     (x) => {
       let key = x[0];
       let value3 = x[1];
-      return key + "=" + value3;
+      return key + "=" + (() => {
+        let _pipe$12 = value3;
+        return percent_encode2(_pipe$12);
+      })();
     }
   );
   return join2(_pipe$1, "&");
