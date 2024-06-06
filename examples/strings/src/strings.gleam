@@ -7,6 +7,7 @@ import lustre/element.{type Element}
 import lustre/event
 import lustre/ui
 import lustre_hash_state
+import gleam/io
 
 // MAIN ------------------------------------------------------------------------
 
@@ -22,7 +23,9 @@ type Model {
 }
 
 fn init(_flags) -> #(Model, effect.Effect(Msg)) {
-  #(Model(dict.new()), lustre_hash_state.init(HashChange))
+  #(Model(dict.new()), lustre_hash_state.init(
+    HashChange |> lustre_hash_state.with_decoder
+  ))
 }
 
 // UPDATE ----------------------------------------------------------------------
@@ -41,7 +44,7 @@ fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(msg)) {
     UserUpdatedMessage(key, value) -> {
       #(
         Model(dict.update(dct, key, fn(_x) { value })),
-        lustre_hash_state.update(key, value),
+        lustre_hash_state.update(key, value |> lustre_hash_state.with_encoder),
       )
     }
   }

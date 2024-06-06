@@ -108,6 +108,27 @@ var BitArray = class _BitArray {
     return new _BitArray(this.buffer.slice(index2));
   }
 };
+var UtfCodepoint = class {
+  constructor(value3) {
+    this.value = value3;
+  }
+};
+function toBitArray(segments) {
+  let size = (segment) => segment instanceof Uint8Array ? segment.byteLength : 1;
+  let bytes = segments.reduce((acc, segment) => acc + size(segment), 0);
+  let view2 = new DataView(new ArrayBuffer(bytes));
+  let cursor = 0;
+  for (let segment of segments) {
+    if (segment instanceof Uint8Array) {
+      new Uint8Array(view2.buffer).set(segment, cursor);
+      cursor += segment.byteLength;
+    } else {
+      view2.setInt8(cursor, segment);
+      cursor++;
+    }
+  }
+  return new BitArray(new Uint8Array(view2.buffer));
+}
 function byteArrayToInt(byteArray) {
   byteArray = byteArray.reverse();
   let value3 = 0;
@@ -118,6 +139,9 @@ function byteArrayToInt(byteArray) {
 }
 function byteArrayToFloat(byteArray) {
   return new Float64Array(byteArray.reverse().buffer)[0];
+}
+function stringBits(string3) {
+  return new TextEncoder().encode(string3);
 }
 var Result = class _Result extends CustomType {
   // @internal
@@ -210,6 +234,13 @@ function structurallyCompatibleObjects(a, b) {
   if (nonstructural.some((c) => a instanceof c))
     return false;
   return a.constructor === b.constructor;
+}
+function remainderInt(a, b) {
+  if (b === 0) {
+    return 0;
+  } else {
+    return a % b;
+  }
 }
 function makeError(variant, module, line, fn, message, extra) {
   let error = new globalThis.Error(message);
@@ -387,11 +418,17 @@ function unwrap(result, default$) {
 }
 
 // build/dev/javascript/gleam_stdlib/gleam/string_builder.mjs
+function append_builder(builder, suffix) {
+  return add(builder, suffix);
+}
 function from_strings(strings) {
   return concat(strings);
 }
 function from_string(string3) {
   return identity(string3);
+}
+function append(builder, second2) {
+  return append_builder(builder, from_string(second2));
 }
 function to_string3(builder) {
   return identity(builder);
@@ -1194,6 +1231,16 @@ function identity(x) {
 function to_string(term) {
   return term.toString();
 }
+function string_replace(string3, target, substitute) {
+  if (typeof string3.replaceAll !== "undefined") {
+    return string3.replaceAll(target, substitute);
+  }
+  return string3.replace(
+    // $& means the whole matched string
+    new RegExp(target.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g"),
+    substitute
+  );
+}
 function string_length(string3) {
   if (string3 === "") {
     return 0;
@@ -1222,6 +1269,9 @@ function graphemes_iterator(string3) {
     return new Intl.Segmenter().segment(string3)[Symbol.iterator]();
   }
 }
+function add(a, b) {
+  return a + b;
+}
 function split(xs, pattern) {
   return List.fromArray(xs.split(pattern));
 }
@@ -1241,6 +1291,29 @@ function concat(xs) {
     result = result + x;
   }
   return result;
+}
+function length(data) {
+  return data.length;
+}
+function bit_array_from_string(string3) {
+  return toBitArray([stringBits(string3)]);
+}
+function bit_array_to_string(bit_array) {
+  try {
+    const decoder2 = new TextDecoder("utf-8", { fatal: true });
+    return new Ok(decoder2.decode(bit_array.buffer));
+  } catch {
+    return new Error(Nil);
+  }
+}
+function print_debug(string3) {
+  if (typeof process === "object" && process.stderr?.write) {
+    process.stderr.write(string3 + "\n");
+  } else if (typeof Deno === "object") {
+    Deno.stderr.writeSync(new TextEncoder().encode(string3 + "\n"));
+  } else {
+    console.log(string3);
+  }
 }
 function new_map() {
   return Dict.new();
@@ -1270,6 +1343,19 @@ function percent_decode(string3) {
 }
 function percent_encode(string3) {
   return encodeURIComponent(string3);
+}
+function encode64(bit_array) {
+  const binString = String.fromCodePoint(...bit_array.buffer);
+  return btoa(binString);
+}
+function decode64(sBase64) {
+  try {
+    const binString = atob(sBase64);
+    const array3 = Uint8Array.from(binString, (c) => c.charCodeAt(0));
+    return new Ok(new BitArray(array3));
+  } catch {
+    return new Error(Nil);
+  }
 }
 function classify_dynamic(data) {
   if (typeof data === "string") {
@@ -1333,6 +1419,83 @@ function try_get_field(value3, field4, or_else) {
     return or_else();
   }
 }
+function inspect(v) {
+  const t = typeof v;
+  if (v === true)
+    return "True";
+  if (v === false)
+    return "False";
+  if (v === null)
+    return "//js(null)";
+  if (v === void 0)
+    return "Nil";
+  if (t === "string")
+    return JSON.stringify(v);
+  if (t === "bigint" || t === "number")
+    return v.toString();
+  if (Array.isArray(v))
+    return `#(${v.map(inspect).join(", ")})`;
+  if (v instanceof List)
+    return inspectList(v);
+  if (v instanceof UtfCodepoint)
+    return inspectUtfCodepoint(v);
+  if (v instanceof BitArray)
+    return inspectBitArray(v);
+  if (v instanceof CustomType)
+    return inspectCustomType(v);
+  if (v instanceof Dict)
+    return inspectDict(v);
+  if (v instanceof Set)
+    return `//js(Set(${[...v].map(inspect).join(", ")}))`;
+  if (v instanceof RegExp)
+    return `//js(${v})`;
+  if (v instanceof Date)
+    return `//js(Date("${v.toISOString()}"))`;
+  if (v instanceof Function) {
+    const args = [];
+    for (const i of Array(v.length).keys())
+      args.push(String.fromCharCode(i + 97));
+    return `//fn(${args.join(", ")}) { ... }`;
+  }
+  return inspectObject(v);
+}
+function inspectDict(map5) {
+  let body = "dict.from_list([";
+  let first2 = true;
+  map5.forEach((value3, key) => {
+    if (!first2)
+      body = body + ", ";
+    body = body + "#(" + inspect(key) + ", " + inspect(value3) + ")";
+    first2 = false;
+  });
+  return body + "])";
+}
+function inspectObject(v) {
+  const name = Object.getPrototypeOf(v)?.constructor?.name || "Object";
+  const props = [];
+  for (const k of Object.keys(v)) {
+    props.push(`${inspect(k)}: ${inspect(v[k])}`);
+  }
+  const body = props.length ? " " + props.join(", ") + " " : "";
+  const head = name === "Object" ? "" : name + " ";
+  return `//js(${head}{${body}})`;
+}
+function inspectCustomType(record) {
+  const props = Object.keys(record).map((label2) => {
+    const value3 = inspect(record[label2]);
+    return isNaN(parseInt(label2)) ? `${label2}: ${value3}` : value3;
+  }).join(", ");
+  return props ? `${record.constructor.name}(${props})` : record.constructor.name;
+}
+function inspectList(list) {
+  return `[${list.toArray().map(inspect).join(", ")}]`;
+}
+function inspectBitArray(bits) {
+  return `<<${Array.from(bits.buffer).join(", ")}>>`;
+}
+function inspectUtfCodepoint(codepoint2) {
+  return `//utfcodepoint(${String.fromCodePoint(codepoint2.value)})`;
+}
 
 // build/dev/javascript/gleam_stdlib/gleam/dict.mjs
 function new$() {
@@ -1386,14 +1549,137 @@ function map_values(dict, fun) {
   return do_map_values(fun, dict);
 }
 
+// build/dev/javascript/gleam_stdlib/gleam/iterator.mjs
+var Stop = class extends CustomType {
+};
+var Continue2 = class extends CustomType {
+  constructor(x0, x1) {
+    super();
+    this[0] = x0;
+    this[1] = x1;
+  }
+};
+var Iterator = class extends CustomType {
+  constructor(continuation) {
+    super();
+    this.continuation = continuation;
+  }
+};
+var Next = class extends CustomType {
+  constructor(element2, accumulator) {
+    super();
+    this.element = element2;
+    this.accumulator = accumulator;
+  }
+};
+function do_unfold(initial, f) {
+  return () => {
+    let $ = f(initial);
+    if ($ instanceof Next) {
+      let x = $.element;
+      let acc = $.accumulator;
+      return new Continue2(x, do_unfold(acc, f));
+    } else {
+      return new Stop();
+    }
+  };
+}
+function unfold(initial, f) {
+  let _pipe = initial;
+  let _pipe$1 = do_unfold(_pipe, f);
+  return new Iterator(_pipe$1);
+}
+function repeatedly(f) {
+  return unfold(void 0, (_) => {
+    return new Next(f(), void 0);
+  });
+}
+function repeat(x) {
+  return repeatedly(() => {
+    return x;
+  });
+}
+function do_fold2(loop$continuation, loop$f, loop$accumulator) {
+  while (true) {
+    let continuation = loop$continuation;
+    let f = loop$f;
+    let accumulator = loop$accumulator;
+    let $ = continuation();
+    if ($ instanceof Continue2) {
+      let elem = $[0];
+      let next = $[1];
+      loop$continuation = next;
+      loop$f = f;
+      loop$accumulator = f(accumulator, elem);
+    } else {
+      return accumulator;
+    }
+  }
+}
+function fold3(iterator, initial, f) {
+  let _pipe = iterator.continuation;
+  return do_fold2(_pipe, f, initial);
+}
+function to_list(iterator) {
+  let _pipe = iterator;
+  let _pipe$1 = fold3(
+    _pipe,
+    toList([]),
+    (acc, e) => {
+      return prepend(e, acc);
+    }
+  );
+  return reverse(_pipe$1);
+}
+function do_take2(continuation, desired) {
+  return () => {
+    let $ = desired > 0;
+    if (!$) {
+      return new Stop();
+    } else {
+      let $1 = continuation();
+      if ($1 instanceof Stop) {
+        return new Stop();
+      } else {
+        let e = $1[0];
+        let next = $1[1];
+        return new Continue2(e, do_take2(next, desired - 1));
+      }
+    }
+  };
+}
+function take2(iterator, desired) {
+  let _pipe = iterator.continuation;
+  let _pipe$1 = do_take2(_pipe, desired);
+  return new Iterator(_pipe$1);
+}
+
 // build/dev/javascript/gleam_stdlib/gleam/string.mjs
 function length2(string3) {
   return string_length(string3);
+}
+function replace(string3, pattern, substitute) {
+  let _pipe = string3;
+  let _pipe$1 = from_string(_pipe);
+  let _pipe$2 = string_replace(_pipe$1, pattern, substitute);
+  return to_string3(_pipe$2);
+}
+function append4(first2, second2) {
+  let _pipe = first2;
+  let _pipe$1 = from_string(_pipe);
+  let _pipe$2 = append(_pipe$1, second2);
+  return to_string3(_pipe$2);
 }
 function concat3(strings) {
   let _pipe = strings;
   let _pipe$1 = from_strings(_pipe);
   return to_string3(_pipe$1);
+}
+function repeat2(string3, times) {
+  let _pipe = repeat(string3);
+  let _pipe$1 = take2(_pipe, times);
+  let _pipe$2 = to_list(_pipe$1);
+  return concat3(_pipe$2);
 }
 function join2(strings, separator) {
   return join(strings, separator);
@@ -1442,6 +1728,18 @@ function split3(x, substring) {
     return map(_pipe$2, to_string3);
   }
 }
+function inspect2(term) {
+  let _pipe = inspect(term);
+  return to_string3(_pipe);
+}
+
+// build/dev/javascript/gleam_stdlib/gleam/io.mjs
+function debug(term) {
+  let _pipe = term;
+  let _pipe$1 = inspect2(_pipe);
+  print_debug(_pipe$1);
+  return term;
+}
 
 // build/dev/javascript/gleam_stdlib/gleam/bool.mjs
 function guard(requirement, consequence, alternative) {
@@ -1450,6 +1748,42 @@ function guard(requirement, consequence, alternative) {
   } else {
     return alternative();
   }
+}
+
+// build/dev/javascript/gleam_stdlib/gleam/bit_array.mjs
+function to_string4(bits) {
+  return bit_array_to_string(bits);
+}
+function base64_encode(input4, padding) {
+  let encoded = encode64(input4);
+  if (padding) {
+    return encoded;
+  } else {
+    return replace(encoded, "=", "");
+  }
+}
+function base64_decode(encoded) {
+  let padded = (() => {
+    let $ = remainderInt(length(bit_array_from_string(encoded)), 4);
+    if ($ === 0) {
+      return encoded;
+    } else {
+      let n = $;
+      return append4(encoded, repeat2("=", 4 - n));
+    }
+  })();
+  return decode64(padded);
+}
+function base64_url_encode(input4, padding) {
+  let _pipe = base64_encode(input4, padding);
+  let _pipe$1 = replace(_pipe, "+", "-");
+  return replace(_pipe$1, "/", "_");
+}
+function base64_url_decode(encoded) {
+  let _pipe = encoded;
+  let _pipe$1 = replace(_pipe, "-", "+");
+  let _pipe$2 = replace(_pipe$1, "_", "/");
+  return base64_decode(_pipe$2);
 }
 
 // build/dev/javascript/lustre/lustre/effect.mjs
@@ -2112,6 +2446,8 @@ function update2(key, value3) {
   );
 }
 function init2(msg) {
+  debug("the msg is:");
+  debug(msg);
   return from2(
     (dispatch) => {
       return listen(
@@ -2133,6 +2469,32 @@ function init2(msg) {
       );
     }
   );
+}
+function with_decoder(f) {
+  return (key, value3) => {
+    debug("value is" + value3);
+    let decoded = (() => {
+      let $ = base64_url_decode(value3);
+      if (!$.isOk() && !$[0]) {
+        return value3;
+      } else {
+        let r = $[0];
+        let $1 = to_string4(r);
+        if (!$1.isOk() && !$1[0]) {
+          return value3;
+        } else {
+          let r$1 = $1[0];
+          return r$1;
+        }
+      }
+    })();
+    return f(key, decoded);
+  };
+}
+function with_encoder(s) {
+  let _pipe = s;
+  let _pipe$1 = bit_array_from_string(_pipe);
+  return base64_url_encode(_pipe$1, true);
 }
 
 // build/dev/javascript/lustre/lustre/element/html.mjs
@@ -2401,9 +2763,12 @@ function init3(_) {
   return [
     new Model(new$()),
     init2(
-      (var0, var1) => {
-        return new HashChange(var0, var1);
-      }
+      (() => {
+        let _pipe = (var0, var1) => {
+          return new HashChange(var0, var1);
+        };
+        return with_decoder(_pipe);
+      })()
     )
   ];
 }
@@ -2425,7 +2790,13 @@ function update3(model, msg) {
       new Model(update(dct, key, (_) => {
         return value3;
       })),
-      update2(key, value3)
+      update2(
+        key,
+        (() => {
+          let _pipe = value3;
+          return with_encoder(_pipe);
+        })()
+      )
     ];
   }
 }
@@ -2474,7 +2845,7 @@ function main() {
     throw makeError(
       "assignment_no_match",
       "strings",
-      15,
+      16,
       "main",
       "Assignment pattern did not match",
       { value: $ }

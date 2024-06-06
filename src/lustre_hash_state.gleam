@@ -4,6 +4,8 @@ import gleam/result
 import gleam/string
 import gleam/uri
 import lustre/effect
+import gleam/io
+import gleam/bit_array
 
 /// A convenience method identical to effect.none()
 pub fn noop() {
@@ -60,9 +62,32 @@ pub fn stringify_hash(dct: dict.Dict(String, String)) -> String {
 /// The effect to be returned in your init method. Sets up hashchange event
 /// listener and sends messages to update.
 pub fn init(msg: fn(String, String) -> msg) -> effect.Effect(msg) {
+  io.debug("the msg is:")
+  io.debug(msg)
   use dispatch <- effect.from
   use hash <- listen
   parse_hash(hash |> string.drop_left(1))
   |> dict.map_values(fn(key, value) { dispatch(msg(key, value)) })
   Nil
+}
+
+pub fn with_decoder(f: fn(String, String) -> msg) {
+  fn(key: String, value: String){
+    io.debug("value is" <> value)
+    let decoded = case bit_array.base64_url_decode(value) {
+      Error(Nil) -> value
+      Ok(r) -> case bit_array.to_string(r) {
+        Error(Nil) -> value
+        Ok(r) -> r
+      }
+    }
+
+    f(key, decoded)
+  }
+}
+
+pub fn with_encoder(s: String) {
+  s
+  |> bit_array.from_string
+  |> bit_array.base64_url_encode(True) 
 }
