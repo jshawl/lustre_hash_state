@@ -108,27 +108,6 @@ var BitArray = class _BitArray {
     return new _BitArray(this.buffer.slice(index2));
   }
 };
-var UtfCodepoint = class {
-  constructor(value3) {
-    this.value = value3;
-  }
-};
-function toBitArray(segments) {
-  let size = (segment) => segment instanceof Uint8Array ? segment.byteLength : 1;
-  let bytes = segments.reduce((acc, segment) => acc + size(segment), 0);
-  let view2 = new DataView(new ArrayBuffer(bytes));
-  let cursor = 0;
-  for (let segment of segments) {
-    if (segment instanceof Uint8Array) {
-      new Uint8Array(view2.buffer).set(segment, cursor);
-      cursor += segment.byteLength;
-    } else {
-      view2.setInt8(cursor, segment);
-      cursor++;
-    }
-  }
-  return new BitArray(new Uint8Array(view2.buffer));
-}
 function byteArrayToInt(byteArray) {
   byteArray = byteArray.reverse();
   let value3 = 0;
@@ -139,9 +118,6 @@ function byteArrayToInt(byteArray) {
 }
 function byteArrayToFloat(byteArray) {
   return new Float64Array(byteArray.reverse().buffer)[0];
-}
-function stringBits(string3) {
-  return new TextEncoder().encode(string3);
 }
 var Result = class _Result extends CustomType {
   // @internal
@@ -235,13 +211,6 @@ function structurallyCompatibleObjects(a, b) {
     return false;
   return a.constructor === b.constructor;
 }
-function remainderInt(a, b) {
-  if (b === 0) {
-    return 0;
-  } else {
-    return a % b;
-  }
-}
 function makeError(variant, module, line, fn, message, extra) {
   let error = new globalThis.Error(message);
   error.gleam_error = variant;
@@ -251,6 +220,22 @@ function makeError(variant, module, line, fn, message, extra) {
   for (let k in extra)
     error[k] = extra[k];
   return error;
+}
+
+// build/dev/javascript/gleam_stdlib/gleam/bool.mjs
+function to_string(bool3) {
+  if (!bool3) {
+    return "False";
+  } else {
+    return "True";
+  }
+}
+function guard(requirement, consequence, alternative) {
+  if (requirement) {
+    return consequence;
+  } else {
+    return alternative();
+  }
 }
 
 // build/dev/javascript/gleam_stdlib/gleam/option.mjs
@@ -280,8 +265,8 @@ function from_result(result) {
 }
 
 // build/dev/javascript/gleam_stdlib/gleam/int.mjs
-function to_string2(x) {
-  return to_string(x);
+function to_string3(x) {
+  return to_string2(x);
 }
 
 // build/dev/javascript/gleam_stdlib/gleam/list.mjs
@@ -418,19 +403,13 @@ function unwrap(result, default$) {
 }
 
 // build/dev/javascript/gleam_stdlib/gleam/string_builder.mjs
-function append_builder(builder, suffix) {
-  return add(builder, suffix);
-}
 function from_strings(strings) {
   return concat(strings);
 }
 function from_string(string3) {
   return identity(string3);
 }
-function append(builder, second2) {
-  return append_builder(builder, from_string(second2));
-}
-function to_string3(builder) {
+function to_string4(builder) {
   return identity(builder);
 }
 function split2(iodata, pattern) {
@@ -458,6 +437,9 @@ function classify(data) {
 function int(data) {
   return decode_int(data);
 }
+function bool(data) {
+  return decode_bool(data);
+}
 function any(decoders) {
   return (data) => {
     if (decoders.hasLength(0)) {
@@ -477,11 +459,11 @@ function any(decoders) {
     }
   };
 }
-function push_path(error, name) {
-  let name$1 = from(name);
+function push_path(error, name2) {
+  let name$1 = from(name2);
   let decoder2 = any(
     toList([string, (x) => {
-      return map2(int(x), to_string2);
+      return map2(int(x), to_string3);
     }])
   );
   let name$2 = (() => {
@@ -492,7 +474,7 @@ function push_path(error, name) {
     } else {
       let _pipe = toList(["<", classify(name$1), ">"]);
       let _pipe$1 = from_strings(_pipe);
-      return to_string3(_pipe$1);
+      return to_string4(_pipe$1);
     }
   })();
   return error.withFields({ path: prepend(name$2, error.path) });
@@ -505,11 +487,11 @@ function map_errors(result, f) {
     }
   );
 }
-function field(name, inner_type) {
+function field(name2, inner_type) {
   return (value3) => {
     let missing_field_error = new DecodeError("field", "nothing", toList([]));
     return try$(
-      decode_field(value3, name),
+      decode_field(value3, name2),
       (maybe_inner) => {
         let _pipe = maybe_inner;
         let _pipe$1 = to_result(_pipe, toList([missing_field_error]));
@@ -517,7 +499,7 @@ function field(name, inner_type) {
         return map_errors(
           _pipe$2,
           (_capture) => {
-            return push_path(_capture, name);
+            return push_path(_capture, name2);
           }
         );
       }
@@ -1228,18 +1210,8 @@ var NOT_FOUND = {};
 function identity(x) {
   return x;
 }
-function to_string(term) {
+function to_string2(term) {
   return term.toString();
-}
-function string_replace(string3, target, substitute) {
-  if (typeof string3.replaceAll !== "undefined") {
-    return string3.replaceAll(target, substitute);
-  }
-  return string3.replace(
-    // $& means the whole matched string
-    new RegExp(target.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g"),
-    substitute
-  );
 }
 function string_length(string3) {
   if (string3 === "") {
@@ -1269,9 +1241,6 @@ function graphemes_iterator(string3) {
     return new Intl.Segmenter().segment(string3)[Symbol.iterator]();
   }
 }
-function add(a, b) {
-  return a + b;
-}
 function split(xs, pattern) {
   return List.fromArray(xs.split(pattern));
 }
@@ -1291,29 +1260,6 @@ function concat(xs) {
     result = result + x;
   }
   return result;
-}
-function length(data) {
-  return data.length;
-}
-function bit_array_from_string(string3) {
-  return toBitArray([stringBits(string3)]);
-}
-function bit_array_to_string(bit_array) {
-  try {
-    const decoder2 = new TextDecoder("utf-8", { fatal: true });
-    return new Ok(decoder2.decode(bit_array.buffer));
-  } catch {
-    return new Error(Nil);
-  }
-}
-function print_debug(string3) {
-  if (typeof process === "object" && process.stderr?.write) {
-    process.stderr.write(string3 + "\n");
-  } else if (typeof Deno === "object") {
-    Deno.stderr.writeSync(new TextEncoder().encode(string3 + "\n"));
-  } else {
-    console.log(string3);
-  }
 }
 function new_map() {
   return Dict.new();
@@ -1343,19 +1289,6 @@ function percent_decode(string3) {
 }
 function percent_encode(string3) {
   return encodeURIComponent(string3);
-}
-function encode64(bit_array) {
-  const binString = String.fromCodePoint(...bit_array.buffer);
-  return btoa(binString);
-}
-function decode64(sBase64) {
-  try {
-    const binString = atob(sBase64);
-    const array3 = Uint8Array.from(binString, (c) => c.charCodeAt(0));
-    return new Ok(new BitArray(array3));
-  } catch {
-    return new Error(Nil);
-  }
 }
 function classify_dynamic(data) {
   if (typeof data === "string") {
@@ -1399,17 +1332,20 @@ function decode_string(data) {
 function decode_int(data) {
   return Number.isInteger(data) ? new Ok(data) : decoder_error("Int", data);
 }
-function decode_field(value3, name) {
+function decode_bool(data) {
+  return typeof data === "boolean" ? new Ok(data) : decoder_error("Bool", data);
+}
+function decode_field(value3, name2) {
   const not_a_map_error = () => decoder_error("Dict", value3);
   if (value3 instanceof Dict || value3 instanceof WeakMap || value3 instanceof Map) {
-    const entry = map_get(value3, name);
+    const entry = map_get(value3, name2);
     return new Ok(entry.isOk() ? new Some(entry[0]) : new None());
   } else if (value3 === null) {
     return not_a_map_error();
   } else if (Object.getPrototypeOf(value3) == Object.prototype) {
-    return try_get_field(value3, name, () => new Ok(new None()));
+    return try_get_field(value3, name2, () => new Ok(new None()));
   } else {
-    return try_get_field(value3, name, not_a_map_error);
+    return try_get_field(value3, name2, not_a_map_error);
   }
 }
 function try_get_field(value3, field4, or_else) {
@@ -1418,83 +1354,6 @@ function try_get_field(value3, field4, or_else) {
   } catch {
     return or_else();
   }
-}
-function inspect(v) {
-  const t = typeof v;
-  if (v === true)
-    return "True";
-  if (v === false)
-    return "False";
-  if (v === null)
-    return "//js(null)";
-  if (v === void 0)
-    return "Nil";
-  if (t === "string")
-    return JSON.stringify(v);
-  if (t === "bigint" || t === "number")
-    return v.toString();
-  if (Array.isArray(v))
-    return `#(${v.map(inspect).join(", ")})`;
-  if (v instanceof List)
-    return inspectList(v);
-  if (v instanceof UtfCodepoint)
-    return inspectUtfCodepoint(v);
-  if (v instanceof BitArray)
-    return inspectBitArray(v);
-  if (v instanceof CustomType)
-    return inspectCustomType(v);
-  if (v instanceof Dict)
-    return inspectDict(v);
-  if (v instanceof Set)
-    return `//js(Set(${[...v].map(inspect).join(", ")}))`;
-  if (v instanceof RegExp)
-    return `//js(${v})`;
-  if (v instanceof Date)
-    return `//js(Date("${v.toISOString()}"))`;
-  if (v instanceof Function) {
-    const args = [];
-    for (const i of Array(v.length).keys())
-      args.push(String.fromCharCode(i + 97));
-    return `//fn(${args.join(", ")}) { ... }`;
-  }
-  return inspectObject(v);
-}
-function inspectDict(map5) {
-  let body = "dict.from_list([";
-  let first2 = true;
-  map5.forEach((value3, key) => {
-    if (!first2)
-      body = body + ", ";
-    body = body + "#(" + inspect(key) + ", " + inspect(value3) + ")";
-    first2 = false;
-  });
-  return body + "])";
-}
-function inspectObject(v) {
-  const name = Object.getPrototypeOf(v)?.constructor?.name || "Object";
-  const props = [];
-  for (const k of Object.keys(v)) {
-    props.push(`${inspect(k)}: ${inspect(v[k])}`);
-  }
-  const body = props.length ? " " + props.join(", ") + " " : "";
-  const head = name === "Object" ? "" : name + " ";
-  return `//js(${head}{${body}})`;
-}
-function inspectCustomType(record) {
-  const props = Object.keys(record).map((label2) => {
-    const value3 = inspect(record[label2]);
-    return isNaN(parseInt(label2)) ? `${label2}: ${value3}` : value3;
-  }).join(", ");
-  return props ? `${record.constructor.name}(${props})` : record.constructor.name;
-}
-function inspectList(list) {
-  return `[${list.toArray().map(inspect).join(", ")}]`;
-}
-function inspectBitArray(bits) {
-  return `<<${Array.from(bits.buffer).join(", ")}>>`;
-}
-function inspectUtfCodepoint(codepoint2) {
-  return `//utfcodepoint(${String.fromCodePoint(codepoint2.value)})`;
 }
 
 // build/dev/javascript/gleam_stdlib/gleam/dict.mjs
@@ -1549,137 +1408,14 @@ function map_values(dict, fun) {
   return do_map_values(fun, dict);
 }
 
-// build/dev/javascript/gleam_stdlib/gleam/iterator.mjs
-var Stop = class extends CustomType {
-};
-var Continue2 = class extends CustomType {
-  constructor(x0, x1) {
-    super();
-    this[0] = x0;
-    this[1] = x1;
-  }
-};
-var Iterator = class extends CustomType {
-  constructor(continuation) {
-    super();
-    this.continuation = continuation;
-  }
-};
-var Next = class extends CustomType {
-  constructor(element2, accumulator) {
-    super();
-    this.element = element2;
-    this.accumulator = accumulator;
-  }
-};
-function do_unfold(initial, f) {
-  return () => {
-    let $ = f(initial);
-    if ($ instanceof Next) {
-      let x = $.element;
-      let acc = $.accumulator;
-      return new Continue2(x, do_unfold(acc, f));
-    } else {
-      return new Stop();
-    }
-  };
-}
-function unfold(initial, f) {
-  let _pipe = initial;
-  let _pipe$1 = do_unfold(_pipe, f);
-  return new Iterator(_pipe$1);
-}
-function repeatedly(f) {
-  return unfold(void 0, (_) => {
-    return new Next(f(), void 0);
-  });
-}
-function repeat(x) {
-  return repeatedly(() => {
-    return x;
-  });
-}
-function do_fold2(loop$continuation, loop$f, loop$accumulator) {
-  while (true) {
-    let continuation = loop$continuation;
-    let f = loop$f;
-    let accumulator = loop$accumulator;
-    let $ = continuation();
-    if ($ instanceof Continue2) {
-      let elem = $[0];
-      let next = $[1];
-      loop$continuation = next;
-      loop$f = f;
-      loop$accumulator = f(accumulator, elem);
-    } else {
-      return accumulator;
-    }
-  }
-}
-function fold3(iterator, initial, f) {
-  let _pipe = iterator.continuation;
-  return do_fold2(_pipe, f, initial);
-}
-function to_list(iterator) {
-  let _pipe = iterator;
-  let _pipe$1 = fold3(
-    _pipe,
-    toList([]),
-    (acc, e) => {
-      return prepend(e, acc);
-    }
-  );
-  return reverse(_pipe$1);
-}
-function do_take2(continuation, desired) {
-  return () => {
-    let $ = desired > 0;
-    if (!$) {
-      return new Stop();
-    } else {
-      let $1 = continuation();
-      if ($1 instanceof Stop) {
-        return new Stop();
-      } else {
-        let e = $1[0];
-        let next = $1[1];
-        return new Continue2(e, do_take2(next, desired - 1));
-      }
-    }
-  };
-}
-function take2(iterator, desired) {
-  let _pipe = iterator.continuation;
-  let _pipe$1 = do_take2(_pipe, desired);
-  return new Iterator(_pipe$1);
-}
-
 // build/dev/javascript/gleam_stdlib/gleam/string.mjs
 function length2(string3) {
   return string_length(string3);
 }
-function replace(string3, pattern, substitute) {
-  let _pipe = string3;
-  let _pipe$1 = from_string(_pipe);
-  let _pipe$2 = string_replace(_pipe$1, pattern, substitute);
-  return to_string3(_pipe$2);
-}
-function append4(first2, second2) {
-  let _pipe = first2;
-  let _pipe$1 = from_string(_pipe);
-  let _pipe$2 = append(_pipe$1, second2);
-  return to_string3(_pipe$2);
-}
 function concat3(strings) {
   let _pipe = strings;
   let _pipe$1 = from_strings(_pipe);
-  return to_string3(_pipe$1);
-}
-function repeat2(string3, times) {
-  let _pipe = repeat(string3);
-  let _pipe$1 = take2(_pipe, times);
-  let _pipe$2 = to_list(_pipe$1);
-  return concat3(_pipe$2);
+  return to_string4(_pipe$1);
 }
 function join2(strings, separator) {
   return join(strings, separator);
@@ -1725,65 +1461,8 @@ function split3(x, substring) {
     let _pipe = x;
     let _pipe$1 = from_string(_pipe);
     let _pipe$2 = split2(_pipe$1, substring);
-    return map(_pipe$2, to_string3);
+    return map(_pipe$2, to_string4);
   }
-}
-function inspect2(term) {
-  let _pipe = inspect(term);
-  return to_string3(_pipe);
-}
-
-// build/dev/javascript/gleam_stdlib/gleam/io.mjs
-function debug(term) {
-  let _pipe = term;
-  let _pipe$1 = inspect2(_pipe);
-  print_debug(_pipe$1);
-  return term;
-}
-
-// build/dev/javascript/gleam_stdlib/gleam/bool.mjs
-function guard(requirement, consequence, alternative) {
-  if (requirement) {
-    return consequence;
-  } else {
-    return alternative();
-  }
-}
-
-// build/dev/javascript/gleam_stdlib/gleam/bit_array.mjs
-function to_string4(bits) {
-  return bit_array_to_string(bits);
-}
-function base64_encode(input4, padding) {
-  let encoded = encode64(input4);
-  if (padding) {
-    return encoded;
-  } else {
-    return replace(encoded, "=", "");
-  }
-}
-function base64_decode(encoded) {
-  let padded = (() => {
-    let $ = remainderInt(length(bit_array_from_string(encoded)), 4);
-    if ($ === 0) {
-      return encoded;
-    } else {
-      let n = $;
-      return append4(encoded, repeat2("=", 4 - n));
-    }
-  })();
-  return decode64(padded);
-}
-function base64_url_encode(input4, padding) {
-  let _pipe = base64_encode(input4, padding);
-  let _pipe$1 = replace(_pipe, "+", "-");
-  return replace(_pipe$1, "/", "_");
-}
-function base64_url_decode(encoded) {
-  let _pipe = encoded;
-  let _pipe$1 = replace(_pipe, "-", "+");
-  let _pipe$2 = replace(_pipe$1, "_", "/");
-  return base64_decode(_pipe$2);
 }
 
 // build/dev/javascript/lustre/lustre/effect.mjs
@@ -1838,17 +1517,26 @@ var Event = class extends CustomType {
 };
 
 // build/dev/javascript/lustre/lustre/attribute.mjs
-function attribute(name, value3) {
-  return new Attribute(name, from(value3), false);
+function attribute(name2, value3) {
+  return new Attribute(name2, from(value3), false);
 }
-function on(name, handler) {
-  return new Event("on" + name, handler);
+function property(name2, value3) {
+  return new Attribute(name2, from(value3), true);
 }
-function class$(name) {
-  return attribute("class", name);
+function on(name2, handler) {
+  return new Event("on" + name2, handler);
+}
+function class$(name2) {
+  return attribute("class", name2);
 }
 function value(val) {
   return attribute("value", val);
+}
+function checked(is_checked) {
+  return property("checked", is_checked);
+}
+function name(name2) {
+  return attribute("name", name2);
 }
 
 // build/dev/javascript/lustre/lustre/element.mjs
@@ -1976,15 +1664,15 @@ function createElementNode({ prev, next, dispatch, stack: stack2 }) {
   let style2 = null;
   let innerHTML = null;
   for (const attr of next.attrs) {
-    const name = attr[0];
+    const name2 = attr[0];
     const value3 = attr[1];
     if (attr.as_property) {
-      if (el2[name] !== value3)
-        el2[name] = value3;
+      if (el2[name2] !== value3)
+        el2[name2] = value3;
       if (canMorph)
-        prevAttributes.delete(name);
-    } else if (name.startsWith("on")) {
-      const eventName = name.slice(2);
+        prevAttributes.delete(name2);
+    } else if (name2.startsWith("on")) {
+      const eventName = name2.slice(2);
       const callback = dispatch(value3);
       if (!handlersForEl.has(eventName)) {
         el2.addEventListener(eventName, lustreGenericEventHandler);
@@ -1992,27 +1680,27 @@ function createElementNode({ prev, next, dispatch, stack: stack2 }) {
       handlersForEl.set(eventName, callback);
       if (canMorph)
         prevHandlers.delete(eventName);
-    } else if (name.startsWith("data-lustre-on-")) {
-      const eventName = name.slice(15);
+    } else if (name2.startsWith("data-lustre-on-")) {
+      const eventName = name2.slice(15);
       const callback = dispatch(lustreServerEventHandler);
       if (!handlersForEl.has(eventName)) {
         el2.addEventListener(eventName, lustreGenericEventHandler);
       }
       handlersForEl.set(eventName, callback);
-      el2.setAttribute(name, value3);
-    } else if (name === "class") {
+      el2.setAttribute(name2, value3);
+    } else if (name2 === "class") {
       className = className === null ? value3 : className + " " + value3;
-    } else if (name === "style") {
+    } else if (name2 === "style") {
       style2 = style2 === null ? value3 : style2 + value3;
-    } else if (name === "dangerous-unescaped-html") {
+    } else if (name2 === "dangerous-unescaped-html") {
       innerHTML = value3;
     } else {
       if (typeof value3 === "string")
-        el2.setAttribute(name, value3);
-      if (name === "value" || name === "selected")
-        el2[name] = value3;
+        el2.setAttribute(name2, value3);
+      if (name2 === "value" || name2 === "selected")
+        el2[name2] = value3;
       if (canMorph)
-        prevAttributes.delete(name);
+        prevAttributes.delete(name2);
     }
   }
   if (className !== null) {
@@ -2105,8 +1793,8 @@ function lustreServerEventHandler(event2) {
   return {
     tag: tag2,
     data: include.reduce(
-      (data2, property) => {
-        const path = property.split(".");
+      (data2, property2) => {
+        const path = property2.split(".");
         for (let i = 0, o = data2, e = event2; i < path.length; i++) {
           if (i === path.length - 1) {
             o[path[i]] = e[path[i]];
@@ -2344,9 +2032,26 @@ function start3(app, selector, flags) {
   );
 }
 
+// build/dev/javascript/lustre/lustre/element/html.mjs
+function div(attrs, children) {
+  return element("div", attrs, children);
+}
+function span(attrs, children) {
+  return element("span", attrs, children);
+}
+function input(attrs) {
+  return element("input", attrs, toList([]));
+}
+function label(attrs, children) {
+  return element("label", attrs, children);
+}
+function textarea(attrs, content) {
+  return element("textarea", attrs, toList([text(content)]));
+}
+
 // build/dev/javascript/lustre/lustre/event.mjs
-function on2(name, handler) {
-  return on(name, handler);
+function on2(name2, handler) {
+  return on(name2, handler);
 }
 function value2(event2) {
   let _pipe = event2;
@@ -2359,6 +2064,21 @@ function on_input(msg) {
     "input",
     (event2) => {
       let _pipe = value2(event2);
+      return map2(_pipe, msg);
+    }
+  );
+}
+function checked2(event2) {
+  let _pipe = event2;
+  return field("target", field("checked", bool))(
+    _pipe
+  );
+}
+function on_check(msg) {
+  return on2(
+    "change",
+    (event2) => {
+      let _pipe = checked2(event2);
       return map2(_pipe, msg);
     }
   );
@@ -2446,8 +2166,6 @@ function update2(key, value3) {
   );
 }
 function init2(msg) {
-  debug("the msg is:");
-  debug(msg);
   return from2(
     (dispatch) => {
       return listen(
@@ -2469,40 +2187,6 @@ function init2(msg) {
       );
     }
   );
-}
-function from_base64(value3) {
-  let $ = base64_url_decode(value3);
-  if (!$.isOk() && !$[0]) {
-    return value3;
-  } else {
-    let r = $[0];
-    let $1 = to_string4(r);
-    if (!$1.isOk() && !$1[0]) {
-      return value3;
-    } else {
-      let decoded = $1[0];
-      return decoded;
-    }
-  }
-}
-function to_base64(value3) {
-  let _pipe = value3;
-  let _pipe$1 = bit_array_from_string(_pipe);
-  return base64_url_encode(_pipe$1, true);
-}
-
-// build/dev/javascript/lustre/lustre/element/html.mjs
-function div(attrs, children) {
-  return element("div", attrs, children);
-}
-function span(attrs, children) {
-  return element("span", attrs, children);
-}
-function input(attrs) {
-  return element("input", attrs, toList([]));
-}
-function label(attrs, children) {
-  return element("label", attrs, children);
 }
 
 // build/dev/javascript/lustre_ui/lustre/ui/layout/stack.mjs
@@ -2758,13 +2442,7 @@ function init3(_) {
     new Model(new$()),
     init2(
       (key, value3) => {
-        return new HashChange(
-          key,
-          (() => {
-            let _pipe = value3;
-            return from_base64(_pipe);
-          })()
-        );
+        return new HashChange(key, value3);
       }
     )
   ];
@@ -2787,13 +2465,7 @@ function update3(model, msg) {
       new Model(update(dct, key, (_) => {
         return value3;
       })),
-      update2(
-        key,
-        (() => {
-          let _pipe = value3;
-          return to_base64(_pipe);
-        })()
-      )
+      update2(key, value3)
     ];
   }
 }
@@ -2804,13 +2476,44 @@ function view(model) {
     toList([
       field3(
         toList([]),
-        toList([text("Write a message:")]),
+        toList([text("checkbox:")]),
         input3(
           toList([
-            value(unwrap(get(dct, "message"), "")),
-            on_input(
+            attribute("type", "checkbox"),
+            value(unwrap(get(dct, "checkbox"), "")),
+            checked(
+              unwrap(get(dct, "checkbox"), "") === "True"
+            ),
+            on_check(
               (value3) => {
-                return new UserUpdatedMessage("message", value3);
+                return new UserUpdatedMessage(
+                  "checkbox",
+                  (() => {
+                    let _pipe = value3;
+                    return to_string(_pipe);
+                  })()
+                );
+              }
+            )
+          ])
+        ),
+        toList([])
+      ),
+      label(toList([]), toList([text("radio button:")])),
+      field3(
+        toList([]),
+        toList([text("option a")]),
+        input3(
+          toList([
+            attribute("type", "radio"),
+            name("radio"),
+            checked(
+              unwrap(get(dct, "radio"), "") === "a"
+            ),
+            value(unwrap(get(dct, "radio"), "")),
+            on_check(
+              (_) => {
+                return new UserUpdatedMessage("radio", "a");
               }
             )
           ])
@@ -2819,13 +2522,98 @@ function view(model) {
       ),
       field3(
         toList([]),
-        toList([text("Write another message:")]),
+        toList([text("option b")]),
         input3(
           toList([
-            value(unwrap(get(dct, "message2"), "")),
+            attribute("type", "radio"),
+            name("radio"),
+            checked(
+              unwrap(get(dct, "radio"), "") === "b"
+            ),
+            value(unwrap(get(dct, "radio"), "")),
+            on_check(
+              (_) => {
+                return new UserUpdatedMessage("radio", "b");
+              }
+            )
+          ])
+        ),
+        toList([])
+      ),
+      field3(
+        toList([]),
+        toList([text("Text input:")]),
+        input3(
+          toList([
+            value(unwrap(get(dct, "textinput"), "")),
             on_input(
               (value3) => {
-                return new UserUpdatedMessage("message2", value3);
+                return new UserUpdatedMessage("textinput", value3);
+              }
+            )
+          ])
+        ),
+        toList([])
+      ),
+      field3(
+        toList([]),
+        toList([text("range:")]),
+        input3(
+          toList([
+            value(unwrap(get(dct, "range"), "")),
+            attribute("type", "range"),
+            attribute("step", "10"),
+            on_input(
+              (value3) => {
+                return new UserUpdatedMessage("range", value3);
+              }
+            )
+          ])
+        ),
+        toList([])
+      ),
+      field3(
+        toList([]),
+        toList([text("textarea:")]),
+        textarea(
+          toList([
+            value(unwrap(get(dct, "textarea"), "")),
+            on_input(
+              (value3) => {
+                return new UserUpdatedMessage("textarea", value3);
+              }
+            )
+          ]),
+          ""
+        ),
+        toList([])
+      ),
+      field3(
+        toList([]),
+        toList([text("date:")]),
+        input3(
+          toList([
+            attribute("type", "date"),
+            value(unwrap(get(dct, "date"), "")),
+            on_input(
+              (value3) => {
+                return new UserUpdatedMessage("date", value3);
+              }
+            )
+          ])
+        ),
+        toList([])
+      ),
+      field3(
+        toList([]),
+        toList([text("color:")]),
+        input3(
+          toList([
+            attribute("type", "color"),
+            value(unwrap(get(dct, "color"), "#bada55")),
+            on_input(
+              (value3) => {
+                return new UserUpdatedMessage("color", value3);
               }
             )
           ])
@@ -2842,7 +2630,7 @@ function main() {
     throw makeError(
       "assignment_no_match",
       "strings",
-      16,
+      19,
       "main",
       "Assignment pattern did not match",
       { value: $ }

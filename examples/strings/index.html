@@ -1,15 +1,56 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fira+Mono:wght@400&display=swap"
+      rel="stylesheet"
+    />
 
     <title>🚧 strings</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: "Fira Mono", monospace;
+      }
 
+      body {
+        padding: 1rem;
+      }
+
+      h1 {
+        font-size: 1rem;
+        margin: 0;
+      }
+
+      label {
+        display: block;
+      }
+
+      nav {
+        border-bottom: 1px solid #ddd;
+        padding: 1rem 0;
+        margin-bottom: 1rem;
+      }
+    </style>
     <script type="module" src="./priv/static/strings.mjs"></script>
   </head>
 
   <body>
+    <h1>lustre_hash_state demo</h1>
+    <nav>
+      <a href="https://github.com/jshawl/lustre_hash_state">Repository</a>
+      <a href="https://hexdocs.pm/lustre_hash_state/">Documentation</a>
+    </nav>
+    <p>
+      Editing any of the below form inputs will update the URL. Refresh the page
+      to see your state saved!
+    </p>
     <div id="app"></div>
   </body>
 </html>
