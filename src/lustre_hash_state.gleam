@@ -111,5 +111,5 @@ pub fn from_base64(value: String) {
 pub fn to_base64(value: String) {
   value
   |> bit_array.from_string
-  |> bit_array.base64_url_encode(True)
+  |> bit_array.base64_url_encode(False)
 }

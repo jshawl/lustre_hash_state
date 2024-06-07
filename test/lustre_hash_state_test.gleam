@@ -35,7 +35,7 @@ pub fn encoded_stringify_hash_test() {
 }
 
 pub fn from_base64_test() {
-  "eWF5IQ=="
+  "eWF5IQ"
   |> lustre_hash_state.from_base64
   |> should.equal("yay!")
 }
@@ -43,5 +43,5 @@ pub fn from_base64_test() {
 pub fn to_base64_test() {
   "yay!"
   |> lustre_hash_state.to_base64
-  |> should.equal("eWF5IQ==")
+  |> should.equal("eWF5IQ")
 }
